@@ -113,12 +113,11 @@ def per_cohort_cox(X, srv_by_cohort, standardize, cores, log, what):
 
 
 def stage_ordinal(df, cohort):
-    if cohort == "CLCA":
-        return df["BCLC"].astype(str).str.strip().map({"0": 0, "A": 1, "B": 2, "C": 3, "D": 4}).astype(float)
-    if cohort == "TCGA":
-        return df["stage"].astype(str).str.extract(r"STAGE (I{1,3}V?|IV)")[0].map(
-            {"I": 1, "II": 2, "III": 3, "IV": 4}).astype(float)
-    return pd.Series(np.nan, index=df.index)
+    """TNM / AJCC stage as 1-4 from the "stage" column of survival_<cohort>.tsv (IA, IIIB, "Stage II", IVA ...)."""
+    if "stage" not in df:
+        return pd.Series(np.nan, index=df.index)
+    return df["stage"].astype(str).str.upper().str.extract(r"(IV|I{1,3})")[0].map(
+        {"I": 1, "II": 2, "III": 3, "IV": 4}).astype(float)
 
 
 def evaluate_external(clf, mtrx, guan, clin, cohort, tag, outdir, log):
@@ -237,10 +236,9 @@ def main():
             surv[(c, ep)] = s.loc[s.index.intersection(E.columns)]
     clin = {c: pd.read_csv(os.path.join(res, "03_genomics_clinical", f"survival_{c}.tsv"), sep="\t", index_col=0)
             for c in R["survival_cohorts"]}
-    # clinical tables are patient-indexed; map to expression samples
+    # ICC step 03 writes sample-indexed clinical tables
     for c in clin:
-        pt = samples.loc[samples["cohort"] == c, "patient"]
-        clin[c] = clin[c].reindex(pt.values).set_axis(pt.index)
+        clin[c] = clin[c].reindex(samples.index[samples["cohort"] == c])
 
     summary = []
     # ---------------- Part A: prognostic regulons, programs, states

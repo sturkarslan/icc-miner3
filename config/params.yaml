@@ -130,7 +130,9 @@ genomics:
   cna_gene: data/FU_iCCA/tables/mmc3_S2B_CNA_at_gene_level.tsv
   arm_threshold: 0.2       # arm gained / lost when the median gene log2 ratio on the arm is >= / <= this
   arm_min_genes: 50
-  exclude_arms: [13p, 14p, 15p, 21p, 22p, Xp, Xq, Yp, Yq]
+  # Acrocentric p arms and sex chromosomes, plus GC-rich arms whose exome-derived ratios move together across
+  # samples (mean r >= 0.45 with 17q / 19p / 19q / 22q; gains AND losses in 20-45%): judged a GC-wave artefact.
+  exclude_arms: [13p, 14p, 15p, 21p, 22p, Xp, Xq, Yp, Yq, 16p, 17p, 17q, 19p, 19q, 22q, 11q]
   focal_amp_threshold: 0.9           # GISTIC high-level thresholds used by the authors (Table S2A)
   focal_del_threshold: -1.3
   focal:
@@ -155,5 +157,44 @@ miner:
   max_exclusion: 0.5
   overexp_threshold: 80
   random_state: 12
-  exclude_modules: []      # technical modules, set after step 04b module QC
+  # Technical modules (step 04b_technical_modules.py): modules that follow the anchor module in the reference cohort
+  # and have no marker biology. Module IDs are from THIS run (random_state 12); re-derive if MINER is rerun.
+  technical: {anchor_module: 0, reference_cohort: FU_iCCA, min_r_anchor: 0.7, max_marker_r: 0.5}
+  exclude_modules: [0, 13, 20, 23, 24, 25, 29, 37, 44, 45, 63, 66, 67, 76, 111, 112, 114, 125, 140, 148, 152, 162, 177, 186, 191, 195, 196, 222, 225, 228, 250, 251, 270, 282, 304, 309, 327, 329, 356, 361, 366, 368, 380, 389, 390, 402, 427, 433, 436, 440, 474, 476, 494, 496, 502, 512, 523, 529, 536, 540, 547, 548, 551, 564, 570, 574, 592, 598, 605, 615, 626, 635, 645, 681, 682, 690, 694, 695, 700, 705, 715, 716, 717, 721, 730, 737, 743, 746, 765, 766, 782, 791, 867, 876, 878]
   exclude_min_fraction: 0.5
+
+# ---------------------------------------------------------------- step 05 (causal inference)
+causal:
+  alpha: 0.05
+  q_max: 0.1
+  min_cohort_altered: 5    # a cohort is tested when it has >= this many altered and wild-type samples
+  # Genomics is essentially one cohort (FU-iCCA; TCGA adds a few mutations), so one tested cohort is enough;
+  # when TCGA is testable for a feature it must agree in direction. Stability is checked separately (split-half).
+  min_cohorts: 1
+  family_r: 0.9
+  min_abs_d: 0.5
+  min_altered_hc: 25       # HCC used 30 with 929 tumours; 25 keeps the FGFR2 fusion (28)
+  gene_positions: data/reference/gencode.v36.annotation.gtf.gene.probemap
+  cytoband: data/reference/cytoBand_hg38.txt.gz
+
+# ---------------------------------------------------------------- step 06 (risk)
+risk:
+  subtypes_dir: subtypes_filtered
+  survival_cohorts: [FU_iCCA, TCGA, GSE107943]
+  endpoints: [OS]                     # OS is the only endpoint in FU-iCCA and TCGA (GSE107943 also has RFS)
+  survival_suffix: _h36m              # 36-month horizon, as in HCC (never pool survival across cohorts)
+  q_max: 0.1
+  method: xgboost
+  n_estimators: 100
+  iterations: 20
+  class1_proportion: 0.2
+  test_proportion: 0.35
+  train_test:                         # only FU-iCCA is large enough to train; the two small cohorts are in-network tests.
+    - {train: FU_iCCA, endpoint: OS, test: [TCGA, GSE107943]}     # GSE244807 is the external test (step 08)
+  ridge:
+    features: [programs, regulons]
+    train_cut_low: 0.5
+    n_iter: 250
+    max_alpha: 5000
+    alpha_step: 100
+    seed: 12

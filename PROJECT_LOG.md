@@ -19,6 +19,27 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Decisions
 
+- **[2026-10-02] Steps 04–05 on the 315-tumour network.**
+  - **MINER (04):** 4,029 regulons, 405 regulators, 9,414 regulon genes, 202 programs, 16 states (45 min).
+    FU-iCCA-only sensitivity run: 5,031 regulons, 444 regulators, 221 programs, 18 states.
+  - **Technical modules (04b, new `04b_technical_modules.py`):** module 0 (625 genes; SRRM2, SAFB2, ACIN1, KMT2A, many ZNFs:
+    long nuclear-retained transcripts, no marker biology) tracks genes detected (r 0.56 in FU-iCCA) and is not associated
+    with survival (Cox HR/SD 0.96, p 0.70) or stage (p 0.16). Rule: modules with r ≥ 0.7 to module 0 in FU-iCCA and
+    |marker r| < 0.5 → 95 of 901 modules (2,303 genes). Same treatment as HCC modules 1/2/4/6: expression unchanged,
+    regulons mostly in these modules dropped.
+  - **Filtered network (04c):** 457 regulons dropped (11%; HCC 4%) → **3,572 regulons, 398 regulators, 164 programs, 19 states.**
+  - **Copy-number arms dropped before causal inference:** 16p, 17p, 17q, 19p, 19q, 22q, 11q (GC-wave artefact: mean r ≥ 0.45
+    with each other across samples, gains and losses both frequent). 6p gain (47%) loads on the same component (r 0.39)
+    and is kept but should be read with caution. 78 features go to step 05.
+  - **Causal inference (05):** `min_cohorts: 1` (genomics is essentially FU-iCCA), `min_altered_hc: 25` (keeps the FGFR2
+    fusion, n 28). 20,722 MINER flows → **6,205 high-confidence** (q ≤ 0.1 both tests, |d| ≥ 0.5, ≥ 25 altered), 4,672 also
+    significant after adjustment, 73 cis-dosage; 1,299 regulon families. High-confidence families per driver: KRAS 202,
+    BAP1 163, TP53 124, IDH pathway 96, IDH1 80, FGFR2 fusion 68, ARID1A ~2; arms: 16q loss 296, 14q loss 197, 2q gain 174,
+    13q loss 171, 1q gain 139, 3p loss 131. Plausibility: KRAS raises FOSL1 / STAT3 / HOX regulons; TP53 raises E2F1.
+    No cross-cohort consistency filter is possible, so these are less stringent than the HCC flows; a split-half
+    stability check is still to do.
+  - **Risk (06) submitted:** SLURM 15053 (train FU-iCCA OS; in-network tests TCGA, GSE107943).
+
 - **[2026-10-02] Discovery design changed to 315 tumours: FU-iCCA 255 + TCGA-CHOL intrahepatic 30 + GSE107943 30 (user decision).**
   GSE244807 stays held out for validation. Reasons for adding the two small cohorts: with 15–17 deaths each they are
   weak validation sets, they add non-Chinese-single-centre diversity, and 255 is small for MINER. Reasons for holding out

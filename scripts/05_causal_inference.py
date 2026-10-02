@@ -166,6 +166,7 @@ def main():
         F = F.loc[args.features.split(",")]
     samples = pd.read_csv(os.path.join(res, "01_harmonized", "samples.tsv"), sep="\t", index_col="sample")
     cohort = samples["cohort"]
+    COHORTS = list(cohort.unique())
     log.info("%d genomic features", len(F))
 
     # ---- symbols and IDs
@@ -253,7 +254,7 @@ def main():
         pooled_rt = rs["t"].reindex(sub["Regulon_ID"]).values
         pooled_et = es["t"].reindex(sub["Regulator"]).values
         tested, agree = np.zeros(len(sub), int), np.zeros(len(sub), int)
-        for c in ["TCGA", "CLCA", "LICA_FR"]:
+        for c in COHORTS:
             cm = [s for s in mut if cohort.get(s) == c]
             cw = [s for s in wt if cohort.get(s) == c]
             if len(cm) < C["min_cohort_altered"] or len(cw) < C["min_cohort_altered"]:
