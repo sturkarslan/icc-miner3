@@ -217,3 +217,14 @@ validation:
       tech_covariate: true           # also adjust for genes detected per sample
       covariates: {sex: 'ch:gender', age: 'ch:age at_the_time_of_sampling'}
       endpoints: [OS]
+
+# ---------------------------------------------------------------- step 07 (subtype / signature mapping)
+post:
+  signatures_config: config/subtype_signatures.yaml
+  subtypes_dir: subtypes_filtered
+  min_set_genes: 5
+  ntp:
+    permutations: 1000
+    fdr: 0.05
+    seed: 1
+    center: all

@@ -1,0 +1,37 @@
+# Signatures for mapping ICC MINER states and programs (steps 07a/07b). Gene lists are never typed in here: they
+# come from MSigDB GMT files or config/subtype_signatures_custom.tsv (supplementary tables; copied from the HCC
+# project). ICC-specific classifiers still missing because their gene lists are not on the server:
+# Sia 2013 proliferation / inflammation classes, Dong 2022 S1-S4 proteomic subgroups, Beaufrere 2024 five classes,
+# Job 2020 tumour-microenvironment classes. Add them to the custom TSV when the supplementary tables are available.
+
+msigdb:
+  release: 2024.1.Hs
+  base_url: https://data.broadinstitute.org/gsea-msigdb/msigdb/release/2024.1.Hs
+  files:
+    c2_cgp: data/reference/msigdb/c2.cgp.v2024.1.Hs.symbols.gmt
+    hallmark: data/reference/msigdb/h.all.v2024.1.Hs.symbols.gmt
+
+library_patterns:
+  - "CHOLANGIO"
+  - "LIVER_CANCER"
+  - "HEPATOCELLULAR"
+  - "^COULOUARN_TEMPORAL_TGFB1"
+  - "PANCREATIC_CANCER"          # ductal adenocarcinoma programs (classical / basal-like biology is shared with large-duct iCCA)
+include_hallmark: true
+
+classifiers:
+  andersen:                     # Andersen et al., Gastroenterology 2012;142:1021 (CCA prognostic classes; class 2 = poor)
+    class1: {up: ["^ANDERSEN_CHOLANGIOCARCINOMA_CLASS1$"]}
+    class2: {up: ["^ANDERSEN_CHOLANGIOCARCINOMA_CLASS2$"]}
+  hoshida:                      # Hoshida et al. 2009 HCC classes; S1/S2-like and S3-like biology is also seen in iCCA
+    S1: {up: ["^HOSHIDA_LIVER_CANCER_SUBCLASS_S1$"]}
+    S2: {up: ["^HOSHIDA_LIVER_CANCER_SUBCLASS_S2$"]}
+    S3: {up: ["^HOSHIDA_LIVER_CANCER_SUBCLASS_S3$"]}
+  oishi:                        # Oishi et al., Hepatology 2012: stem-cell-like cholangiocarcinoma
+    stem_like: {up: ["^OISHI_CHOLANGIOMA_STEM_CELL_LIKE_UP$"], dn: ["^OISHI_CHOLANGIOMA_STEM_CELL_LIKE_DN$"]}
+    mature: {up: ["^OISHI_CHOLANGIOMA_STEM_CELL_LIKE_DN$"], dn: ["^OISHI_CHOLANGIOMA_STEM_CELL_LIKE_UP$"]}
+  inflamed:                     # Montironi 2023 20-gene Inflamed signature (HCC-derived, generic T-cell inflammation)
+    inflamed: {up: ["^custom:MONTIRONI2023_INFLAMED$"]}
+    non_inflamed: {dn: ["^custom:MONTIRONI2023_INFLAMED$"]}
+
+custom_file: config/subtype_signatures_custom.tsv

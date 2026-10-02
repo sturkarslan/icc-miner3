@@ -19,6 +19,25 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Decisions
 
+- **[2026-10-02] Step 07a/07b: signature library and class mapping (first pass, MSigDB + the HCC custom immune sets).**
+  - `config/subtype_signatures.yaml` rewritten for ICC: library = cholangiocarcinoma, liver-cancer and pancreatic-cancer
+    C2 sets + hallmarks + custom (242 sets); NTP classifiers Andersen 2012 (class 1 / class 2), Hoshida S1–S3,
+    Oishi 2012 stem-like / mature, Montironi 20-gene Inflamed. **Missing (gene lists not on the server):** Sia 2013
+    proliferation / inflammation, Dong 2022 S1–S4, Beaufrère 2024 five classes, Job 2020 microenvironment classes.
+  - **Check against authors' labels:** Andersen NTP call vs GSE107943 authors' class A/B: ARI 0.84 (25 assigned tumours).
+  - **Risk score follows the known large-duct / small-duct axis.** Median risk z: Andersen class 2 +1.05 vs class 1 −0.69
+    (KW p 2e-35); Oishi mature +0.81 vs stem-like −0.68 (1e-33); Hoshida S1 +0.67, S3 −0.51 (1e-12); inflamed vs not: weak
+    (p 0.04). By driver: KRAS-mutant +1.46 vs −0.29 wild type (p 2e-12); TP53 +0.29 vs −0.21 (0.006); BAP1 −0.44 vs −0.07
+    (0.011); FGFR2 fusion −0.40 vs −0.13 (0.054); IDH ≈ no difference.
+  - **Largest risk weights:** adverse = programs matching Andersen class 2 (P133, r 0.97; JUN / FOSL1 / BACH1 regulons),
+    pancreatic-ductal-adenocarcinoma-like (P5, r 0.81), hypoxia (P35), proliferative G3-like (P138), mitotic spindle (P137);
+    protective = Andersen class 1 programs (P37 r 0.93, P49 0.82) and the Oishi stem-like program (P83, r 0.96).
+    So, as in HCC, the risk model mostly recovers an established prognostic axis; whether it adds to Andersen class
+    is the head-to-head still to run.
+  - 96 of 164 programs have a signature overlap at FDR < 0.05; median best |r| with a signature 0.70.
+  - Not yet adapted: 07c (integrated figures, beyond-known test, head-to-head), 07d (causal flow figures), 07e/07f
+    equivalents, 08b (LOCO → split-half), 09 (publication figures), `reference_panel.yaml` for ICC.
+
 - **[2026-10-02] Steps 06 and 08: risk model and first external validation.**
   - **Prognostic units (FU-iCCA OS, 36 months; 244 patients, 94 deaths):** 1,827 of 3,572 regulons and 93 of 164 programs at
     q ≤ 0.1 in FU-iCCA alone; with the same sign in TCGA and GSE107943: 1,402 regulons (1,182 adverse), 67 programs
