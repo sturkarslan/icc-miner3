@@ -8,4 +8,4 @@ replicating the HCC pipeline (`sturkarslan/hcc-miner3`). Data and results never 
 - `scripts/01_…` to `09_…` — pipeline steps; SLURM wrappers in `scripts/slurm/` (submit from the project root).
 - `PROJECT_LOG.md` — decisions, issues and open questions.
 
-Status: data fetched; steps 01–02 run provisionally on three cohorts; MINER on hold (see `PROJECT_LOG.md`).
+Discovery cohort: FU-iCCA (255 tumours). Validation: GSE244807, TCGA-CHOL, GSE107943 and others. See `PROJECT_LOG.md` for status.

@@ -125,6 +125,16 @@ def main():
     batch = samples["cohort"]
     log.info("Input: %d genes x %d samples; cohorts %s", *expr.shape, batch.value_counts().to_dict())
 
+    if batch.nunique() == 1:
+        # Single discovery cohort: nothing to correct. Gene z-score only (same final step as the other methods).
+        name = B.get("single_cohort_matrix", "single")
+        z = zscore_rows(expr.loc[expr.var(axis=1) > 0]).clip(lower=B.get("z_clip_low"))
+        z.index.name = "ensembl"
+        z.to_csv(os.path.join(outdir, f"expression_{name}_z.csv"))
+        log.info("One cohort (%s): no batch correction. Wrote MINER3 input expression_%s_z.csv (%d x %d)",
+                 batch.iloc[0], name, *z.shape)
+        return
+
     # ComBat cannot handle genes with zero variance inside a batch
     zero_var = pd.concat([expr.loc[:, batch == b].var(axis=1) == 0 for b in batch.unique()], axis=1).any(axis=1)
     if zero_var.any():

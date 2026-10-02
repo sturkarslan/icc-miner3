@@ -7,19 +7,41 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Open questions
 
-- **FU-iCCA (NODE OEP001105; Dong et al., Cancer Cell 2022) needs a manual download** (NODE login). It is the only
-  large cohort with WES, so causal inference (step 05) cannot be done without it. Files wanted are listed in
-  `data/FU_iCCA/manual/README_DOWNLOAD.txt`. Same for OEP002768 and OEP002560.
-- **How to handle the technical axis in GSE244807** (see 2026-10-01 entry): options are (a) FU-iCCA as the discovery
-  backbone and GSE244807 as validation only; (b) keep GSE244807 in discovery with specimen type as a ComBat batch and
-  the low-complexity samples removed; (c) surgical specimens only (109).
-- External survival validation: none of the array cohorts (GSE89749, GSE26566, GSE32225, GSE76297) has survival in
-  GEO. Survival would have to come from paper supplements.
-- No GitHub remote yet for this repository (local git only).
+- **GitHub repository not created yet.** The server has no `gh` CLI or API token (SSH key only), so the repo cannot be
+  created from here. Once an empty `sturkarslan/icc-miner3` exists, `git push -u origin main` publishes it (remote is set).
+- **GC-rich chromosome arms look unreliable in the FU-iCCA copy-number table** (17p/q, 19p/q, 22q; see step 03b entry).
+  Decide at step 05 whether to drop them or correct for a per-sample GC component.
+- NODE cohorts OEP002768 (validation) and OEP002560 (multi-region) are still not downloaded.
+- External survival validation beyond GSE244807 / TCGA-CHOL / GSE107943: the array cohorts (GSE89749, GSE26566,
+  GSE32225, GSE76297) have no survival in GEO.
+- With one discovery cohort there is no cohort-consistency filter for causal flows and no cross-cohort risk training
+  as in HCC; replacements (split-half / bootstrap stability, validation-cohort replication) to be set at steps 05–06.
 
 ## Decisions
 
-- **[2026-10-01] Steps 01–02 run on the three cohorts available now (provisional; MINER not started).**
+- **[2026-10-01] Discovery design: FU-iCCA only; GSE244807 is validation (user decision).** TCGA-CHOL (30) and GSE107943
+  (30) are also kept out of the network so that every cohort with survival other than FU-iCCA is an independent test.
+  One discovery cohort means no batch correction: step 02 writes `expression_single_z.csv` (`miner.matrix: single`).
+  - **FU-iCCA files** are the paper's supplementary tables, placed by the user in `data/FU_iCCA/manual/` (mmc2 = Table S1,
+    mmc3 = Table S2, mmc5 = Table S4) and exported sheet by sheet to `data/FU_iCCA/tables/`: clinical (262 patients),
+    WES mutations (253), mRNA log2(TPM+1) (255, gene symbols), gene-level copy ratio (253), GISTIC peaks, FGFR2 fusions.
+    Proteome (214) and phosphoproteome are also there (not used yet; candidates for protein-level validation).
+  - **Step 01:** 255 tumours, 15,380 genes (TPM ≥ 1 in ≥ 20%). Symbols mapped to Ensembl by the HCC tiers (429 of 20,173
+    unmapped). Genes detected per sample 12,901–19,569 (compare GSE244807: 3,769–29,082).
+  - **Step 03 (rewritten for ICC):** OS only. 244 of 255 with OS, 99 deaths (94 within 36 months), median follow-up of
+    censored patients 834 days, max 1,806. Files `survival_FU_iCCA_OS[_h36m]_miner.csv`. No recurrence endpoint.
+  - **Step 03b (rewritten for ICC):** 89 features kept (≥ 10 altered, ≥ 3%): 8 gene mutations (TP53 49, KRAS 43, IDH1 30,
+    BAP1 30, ARID1A 27, PBRM1 13, IDH2 11, ARID2 10), 7 pathways (IDH 41, RAS-MAPK 56, chromatin 79, …), FGFR2 fusion 28,
+    3 focal amplifications (MYC, ERBB2, CCND1/FGF19; 11–13 each), 70 arm events. Mutations are all protein-altering WES
+    calls in curated iCCA drivers (no VAF filter; table minimum 0.04).
+  - **Copy-number caveat:** only gene-level log2 ratios are published, so arm calls are the median over the arm's genes
+    at ±0.2. Expected iCCA events are there (1q gain 43%, 6q loss 36%, 3p loss 31%, 9p / 14q loss 28%), but 6p gain 47%
+    is higher than expected and the GC-rich arms 17q / 19p / 19q / 22q show both gains (37–44%) and losses and
+    correlate with each other (r 0.5–0.6): probably a GC-wave artefact of exome-derived ratios. CDKN2A homozygous
+    deletion does not reach 10 samples at the authors' −1.3 threshold.
+  - **Step 04 (MINER) submitted:** SLURM 15041.
+
+- **[2026-10-01] (Superseded by the discovery design above.) Steps 01–02 on the three public cohorts, which led to keeping GSE244807 out of discovery.**
   - Step 01: GSE244807 246, TCGA-CHOL 30 intrahepatic primaries (35 primary tumours, 5 non-intrahepatic removed via
     `config/tcga_exclude.tsv`), GSE107943 30 tumours → 306 samples, 14,479 genes (TPM ≥ 1 in ≥ 20% of every cohort).
     New in `01_harmonize_expression.py`: `rpkm_table` loader (GSE107943 RPKM rescaled to TPM) and a generic

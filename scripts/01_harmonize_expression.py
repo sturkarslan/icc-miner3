@@ -71,6 +71,19 @@ def load_tsv_tpm(cfg, log):
     return df
 
 
+def load_tsv_log2tpm(cfg, log):
+    """Gene x sample table of log2(TPM + pseudocount) (FU-iCCA Table S1C): skiprows title lines, first column = gene."""
+    df = pd.read_csv(p(cfg["expression"]), sep="\t", skiprows=cfg.get("skiprows", 0), index_col=0, low_memory=False)
+    df = df.dropna(axis=1, how="all").apply(pd.to_numeric, errors="coerce")
+    df.index = df.index.astype(str).str.strip()
+    pre = cfg.get("sample_prefix", "")
+    df.columns = [pre + str(c).strip() for c in df.columns]
+    tpm = (np.power(2.0, df) - cfg.get("pseudocount", 1)).clip(lower=0)
+    log.info("%s: %d genes x %d samples; back-transformed log2(TPM+%g); column-sum median %.3g", cfg["_name"], *tpm.shape,
+             cfg.get("pseudocount", 1), tpm.sum().median())
+    return tpm
+
+
 def load_rpkm_table(cfg, log):
     """Gene table with annotation columns, then one RPKM column per sample (GSE107943). RPKM is rescaled
     to TPM (RPKM / sum(RPKM) * 1e6). Sample names come from header_row (0-based data row holding the
@@ -94,7 +107,7 @@ def load_rpkm_table(cfg, log):
 
 LOADERS = {"xena_log2tpm": load_xena_log2tpm, "cbioportal_tpm": load_cbioportal_tpm,
            "rdata_tpm": load_rdata_tpm, "tsv_tpm": load_tsv_tpm,
-           "rpkm_table": load_rpkm_table}
+           "rpkm_table": load_rpkm_table, "tsv_log2tpm": load_tsv_log2tpm}
 
 
 # ------------------------------------------------------------------ ID mapping
@@ -364,8 +377,13 @@ def main():
     log.info("Wrote %d genes x %d samples to %s\n%s", *expr.shape, outdir, summary.to_string(index=False))
 
     import qc_plots
-    written = qc_plots.harmonization_report(outdir, P["harmonize"], list(P["cohorts"]))
-    log.info("QC figures: %s", ", ".join(written))
+    try:
+        written = qc_plots.harmonization_report(outdir, P["harmonize"], list(P["cohorts"]))
+        log.info("QC figures: %s", ", ".join(written))
+    except ValueError as e:  # between-cohort panels need >= 2 cohorts
+        if len(P["cohorts"]) > 1:
+            raise
+        log.warning("One cohort: between-cohort QC figures skipped (%s)", e)
 
 
 if __name__ == "__main__":
