@@ -19,6 +19,21 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Decisions
 
+- **[2026-10-02] Discovery design changed to 315 tumours: FU-iCCA 255 + TCGA-CHOL intrahepatic 30 + GSE107943 30 (user decision).**
+  GSE244807 stays held out for validation. Reasons for adding the two small cohorts: with 15–17 deaths each they are
+  weak validation sets, they add non-Chinese-single-centre diversity, and 255 is small for MINER. Reasons for holding out
+  GSE244807: within-cohort technical axis (PC1 53% of variance, r −0.92 with genes detected; biopsy vs surgical) and it is
+  the only large independent survival cohort (181 deaths). Option not taken: add its 109 surgical specimens (≈ 424).
+  - **Step 01:** 315 samples, 13,782 genes. **Step 02:** ComBat by cohort, silhouette 0.46 → −0.01, kNN mixing 0.005 → 0.79,
+    within-cohort structure ρ 1.00 / 1.00 / 1.00. `miner.matrix: combat`.
+  - **Step 03:** now config-driven per cohort and endpoint. OS: FU-iCCA 244 (99 deaths), TCGA 30 (15), GSE107943 30 (17);
+    RFS: GSE107943 only (21 events).
+  - **Step 03b:** TCGA gene and pathway mutations added (Xena GDC MAF); 92 features kept. TCGA contributes little: BAP1 6,
+    PBRM1 6, IDH1 4, ARID1A 4, TP53 1, KRAS 1. Copy number and fusions are FU-iCCA only; GSE107943 has no genomics.
+    Two TCGA samples are hypermutated (916 and 771 calls; ZH-A8Y7, W5-AA39): watch for passenger hits in driver features.
+  - **MINER:** 315-tumour run SLURM 15047 (`results/04_miner/combat`). The FU-iCCA-only run (SLURM 15041,
+    `results/04_miner/single`, 15,380 genes) is kept as a sensitivity comparison.
+
 - **[2026-10-01] Discovery design: FU-iCCA only; GSE244807 is validation (user decision).** TCGA-CHOL (30) and GSE107943
   (30) are also kept out of the network so that every cohort with survival other than FU-iCCA is an independent test.
   One discovery cohort means no batch correction: step 02 writes `expression_single_z.csv` (`miner.matrix: single`).

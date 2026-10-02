@@ -8,17 +8,39 @@ paths:
 
 # ---------------------------------------------------------------- step 01
 cohorts:
-  # Discovery = FU-iCCA only (Dong et al., Cancer Cell 2022; NODE OEP001105): 255 tumours with RNA-seq, 253 with WES
-  # and copy number, OS for 251. Files are the paper's supplementary tables (mmc2 = Table S1, mmc3 = Table S2),
-  # exported sheet by sheet to data/FU_iCCA/tables/. GSE244807, TCGA-CHOL and GSE107943 are validation cohorts
-  # (step 08), not part of the network (decision 2026-10-01, PROJECT_LOG).
+  # Discovery = FU-iCCA + TCGA-CHOL (intrahepatic) + GSE107943, 315 tumours (user decision 2026-10-02).
+  # GSE244807 is held out for validation (step 08): strong within-cohort technical axis, and it is the only
+  # large independent cohort with survival (PROJECT_LOG).
   FU_iCCA:
+    # Dong et al., Cancer Cell 2022 (NODE OEP001105): paper supplementary tables exported to data/FU_iCCA/tables/
     expression: data/FU_iCCA/tables/mmc2_S1C_mRNA_expression.tsv   # log2(TPM + 1), gene symbols
     format: tsv_log2tpm
     skiprows: 1
     pseudocount: 1
     id_type: symbol
     sample_prefix: 'FU'              # numeric patient IDs -> FU111, ...
+  TCGA:
+    # UCSC Xena GDC hub; log2(TPM + 1), versioned Ensembl IDs (GENCODE v36)
+    expression: data/TCGA_CHOL/TCGA-CHOL.star_tpm.tsv.gz
+    format: xena_log2tpm
+    pseudocount: 1
+    id_type: ensembl
+    sample_regex: '^TCGA-..-....-01A'
+    exclude_list: config/tcga_exclude.tsv      # non-intrahepatic cases (GDC tissue_or_organ_of_origin)
+  GSE107943:
+    # Ahn et al. (PMID 30941318), 30 iCCA tumours (+ 27 adjacent liver, dropped); RPKM rescaled to TPM
+    expression: data/GSE107943/suppl/GSE107943_RPKM.txt.gz
+    format: rpkm_table
+    id_column: Ensenble
+    first_sample_column: s_081124004_001_RPKM
+    header_row: 0
+    id_type: ensembl
+    sample_table: data/GSE107943/samples_geo.tsv
+    sample_id_column: title
+    sample_prefix: 'GSE107943_'
+    keep_filters:
+      'ch:tissue': ['Tumor (Intrahepatic cholangiocarcinoma)']
+    label_columns: {author_class: 'ch:class', pathologic_type: 'ch:pathologic type'}
 
 id_mapping:
   gencode_probemap: data/reference/gencode.v36.annotation.gtf.gene.probemap
@@ -49,19 +71,37 @@ batch:
 survival:
   horizon_months: 36               # same horizon as the HCC project; also written without a horizon
 clinical:
+  # id = sample_prefix + id_column (+ matched on the first id_match_chars characters of the network sample ID)
   FU_iCCA:
     table: data/FU_iCCA/tables/mmc2_S1A_Clinical_info.tsv
     skiprows: 1
     id_column: Patient_ID
-    os_days_column: 'OS, overall survival (day)'
-    os_event_column: OS_event
+    endpoints:
+      OS: {time_column: 'OS, overall survival (day)', event_column: OS_event, time_to_days: 1}
     covariates: {sex: Sex, age: Age, stage: 'TNM stage', vascular_invasion: 'Vascular invasion',
                  lymph_node: 'Regional lymph Node metastasis', hbsag: 'HBsAg  (1, positive; 0, negative)',
                  liver_fluke: 'Liver fluke', adjuvant: 'Adjuvant therapies', ca19_9: 'CA19-9, carbohydrate antigen 19-9 (U/mL)'}
+  TCGA:
+    table: data/TCGA_CHOL/gdc_cases.tsv        # GDC API case table from the fetch script
+    id_column: patient
+    id_match_chars: 12
+    endpoints:
+      OS: {time_column: os_days, event_column: os_event, time_to_days: 1}
+    covariates: {age: demographic.age_at_index, stage: diagnoses.ajcc_pathologic_stage}
+  GSE107943:
+    table: data/GSE107943/samples_geo.tsv
+    id_column: title
+    endpoints:
+      OS: {time_column: 'ch:survival(mo)', event_column: 'ch:death', time_to_days: 30.44}
+      RFS: {time_column: 'ch:dsfree(mo)', event_column: 'ch:recurr', time_to_days: 30.44}
+    covariates: {sex: 'ch:Sex', age: 'ch:age', stage: 'ch:stageajcc', vascular_invasion: 'ch:vas_inv',
+                 hbsag: 'ch:hepatitis b', ca19_9: 'ch:ca19-9'}
 
 # ---------------------------------------------------------------- step 03b (genomic features for causal inference)
 genomics:
-  min_altered: 10          # altered samples among profiled (one cohort of ~253)
+  min_altered: 10          # altered samples among profiled (FU-iCCA ~249 + TCGA 30 for mutations)
+  TCGA:
+    maf: data/TCGA_CHOL/TCGA-CHOL.somaticmutation_wxs.tsv.gz    # Xena: sample, gene, effect (VEP terms)
   min_freq: 0.03
   mutations: data/FU_iCCA/tables/mmc2_S1B_WES_mutations.tsv
   wes_flag_column: WES_seq           # clinical table: profiled by WES
@@ -106,7 +146,7 @@ genomics:
 
 # ---------------------------------------------------------------- step 04 (MINER3)
 miner:
-  matrix: single
+  matrix: combat           # 315-tumour network. The FU-iCCA-only run (matrix "single", 255) is kept as a sensitivity run
   idmap: /users/sturkars/mambaforge/envs/miner3/lib/python3.11/site-packages/miner/data/identifier_mappings.txt
   tfs2genes: null
   min_genes: 6

@@ -5,6 +5,7 @@ One matrix, features x network samples: 1 = altered, 0 = profiled and not altere
 MINER's causalNetworkAnalysis() treats every non-1 column as wild type, so step 05 runs each feature
 on its profiled (non-empty) samples only.
 
+TCGA-CHOL adds gene and pathway mutations only (Xena GDC MAF); GSE107943 has no genomics (all empty).
 FU-iCCA sources (paper supplementary tables):
   gene mutation     Table S1B WES calls, protein-altering classes (genomics.mutation_classes), curated
                     iCCA driver genes only (genomics.driver_genes); profiled = clinical WES_seq == Yes
@@ -49,13 +50,15 @@ def main():
     cohort = "FU_iCCA"
     pre = P["cohorts"][cohort].get("sample_prefix", "")
     samples = pd.read_csv(os.path.join(res, "01_harmonized", "samples.tsv"), sep="\t")
-    net = samples.loc[samples["cohort"] == cohort, "sample"].tolist()
+    fu = samples.loc[samples["cohort"] == cohort, "sample"].tolist()
+    net = samples["sample"].tolist()                 # all network samples; cohorts without data stay empty
+    tcga = samples.loc[samples["cohort"] == "TCGA", "sample"].tolist()
 
     C = P["clinical"][cohort]
     clin = pd.read_csv(p(C["table"]), sep="\t", skiprows=C.get("skiprows", 0), dtype=str)
     clin.index = pre + clin[C["id_column"]].str.strip()
-    wes = [s for s in net if clin[G["wes_flag_column"]].get(s) == "Yes"]
-    rna = [s for s in net if clin[G["rna_flag_column"]].get(s) == "Yes"]
+    wes = [s for s in fu if clin[G["wes_flag_column"]].get(s) == "Yes"]
+    rna = [s for s in fu if clin[G["rna_flag_column"]].get(s) == "Yes"]
 
     rows, types = {}, {}
 
@@ -74,6 +77,15 @@ def main():
     wes = [s for s in wes if s in set(m["sample"])] if len(set(wes) - set(m["sample"])) > 20 else wes
     mk = m[m["cls"].isin(G["mutation_classes"])]
     by_gene = mk.groupby("Gene")["sample"].apply(set)
+    # TCGA-CHOL (Xena GDC MAF): same protein-altering classes (first VEP term); sequenced = samples in the MAF
+    if tcga and G.get("TCGA", {}).get("maf"):
+        t = pd.read_csv(p(G["TCGA"]["maf"]), sep="\t", dtype=str)
+        seq = [s for s in tcga if s in set(t["sample"])]
+        tk = t[t["effect"].str.split(";").str[0].isin(G["mutation_classes"]) & t["sample"].isin(seq)]
+        log.info("TCGA: %d of %d network samples in the MAF; %d protein-altering calls", len(seq), len(tcga), len(tk))
+        by_gene = by_gene.combine(tk.groupby("gene")["sample"].apply(set), lambda a, b: (a if isinstance(a, set) else set())
+                                  | (b if isinstance(b, set) else set()), fill_value=set())
+        wes = wes + seq
     for g in G["driver_genes"]:
         add(f"MUT_{g}", "gene_mutation", by_gene.get(g, set()), wes)
     for pw, genes in G["pathways"].items():
@@ -93,7 +105,7 @@ def main():
     scols = [c for c in cn.columns if re.fullmatch(r"\d+", str(c).strip())]
     R = cn[scols].apply(pd.to_numeric, errors="coerce")
     R.columns = [pre + str(c).strip() for c in scols]
-    cna = [s for s in net if s in R.columns]
+    cna = [s for s in fu if s in R.columns]
     log.info("Copy number: %d genes x %d samples (%d in network); %d arms", len(R), R.shape[1], len(cna), cn["arm"].nunique())
     n_arm = cn.groupby("arm").size()
     arms = [a for a in n_arm.index if n_arm[a] >= G["arm_min_genes"] and a not in G["exclude_arms"]]
@@ -114,9 +126,13 @@ def main():
         add(f"{'AMP' if spec['type'] == 'amp' else 'HD'}_{name}", "focal_cna", alt, cna)
 
     F = pd.DataFrame(rows).T
-    info = pd.DataFrame({"type": pd.Series(types), f"profiled_{cohort}": F.notna().sum(1), f"altered_{cohort}": (F == 1).sum(1)})
-    info[f"freq_{cohort}"] = (info[f"altered_{cohort}"] / info[f"profiled_{cohort}"]).round(3)
-    info["profiled"], info["altered"], info["freq"] = info[f"profiled_{cohort}"], info[f"altered_{cohort}"], info[f"freq_{cohort}"]
+    info = pd.DataFrame({"type": pd.Series(types)})
+    for c in samples["cohort"].unique():
+        k = samples.loc[samples["cohort"] == c, "sample"]
+        info[f"profiled_{c}"], info[f"altered_{c}"] = F[k].notna().sum(1), (F[k] == 1).sum(1)
+        info[f"freq_{c}"] = (info[f"altered_{c}"] / info[f"profiled_{c}"]).round(3)
+    info["profiled"], info["altered"] = F.notna().sum(1), (F == 1).sum(1)
+    info["freq"] = (info["altered"] / info["profiled"]).round(3)
     info["kept"] = (info["altered"] >= G["min_altered"]) & (info["freq"] >= G["min_freq"])
     info = info.sort_values(["kept", "altered"], ascending=False)
     info.index.name = "feature"
@@ -125,7 +141,7 @@ def main():
     K.index.name = "feature"
     K.to_csv(os.path.join(outdir, "genomic_features.csv"), float_format="%.0f")
     log.info("Features kept: %d of %d -> %s", len(K), len(F), info[info["kept"]]["type"].value_counts().to_dict())
-    log.info("Kept non-arm features:\n%s", info[info["kept"] & (info["type"] != "arm_cna")][["type", "profiled", "altered", "freq"]].to_string())
+    log.info("Kept non-arm features:\n%s", info[info["kept"] & (info["type"] != "arm_cna")][["type", "profiled", "altered", "freq"] + [c for c in info.columns if c.startswith("altered_")]].to_string())
     log.info("Kept arm features:\n%s", info[info["kept"] & (info["type"] == "arm_cna")][["altered", "freq"]].T.to_string())
     log.info("Driver genes below threshold: %s", info[~info["kept"] & (info["type"] == "gene_mutation")]["altered"].to_dict())
 

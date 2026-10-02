@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 """Step 03 (clinical part, ICC): survival files for MINER3 and a clinical table for the discovery cohort.
 
-FU-iCCA has overall survival only (days, event). One MINER file per cohort and endpoint, with and
+Endpoints per cohort are in config clinical.<cohort>.endpoints (FU-iCCA and TCGA: OS; GSE107943: OS and
+RFS). Survival is never pooled across cohorts. One MINER file per cohort and endpoint, with and
 without the common horizon (survival.horizon_months): events after the horizon are censored at it.
 
 Outputs (results/03_genomics_clinical/):
@@ -46,29 +47,37 @@ def main():
     for cohort, C in P["clinical"].items():
         pre = P["cohorts"][cohort].get("sample_prefix", "")
         t = pd.read_csv(p(C["table"]), sep="\t", skiprows=C.get("skiprows", 0), dtype=str).dropna(axis=1, how="all")
-        cov = C.get("covariates") or {}
-        require_columns(t, [C["id_column"], C["os_days_column"], C["os_event_column"]] + list(cov.values()), f"{cohort} clinical")
-        d = pd.DataFrame({"sample": pre + t[C["id_column"]].str.strip(),
-                          "os_days": pd.to_numeric(t[C["os_days_column"]], errors="coerce"),
-                          "os_event": pd.to_numeric(t[C["os_event_column"]], errors="coerce")})
+        cov, eps = C.get("covariates") or {}, C["endpoints"]
+        require_columns(t, [C["id_column"]] + [e[k] for e in eps.values() for k in ("time_column", "event_column")]
+                        + list(cov.values()), f"{cohort} clinical")
+        t = t.dropna(subset=[C["id_column"]])
+        t.index = pre + t[C["id_column"]].str.strip()
+        in_net = samples.loc[samples["cohort"] == cohort, "sample"]
+        n = C.get("id_match_chars")
+        key = in_net.str[:n] if n else in_net          # e.g. TCGA: patient = first 12 characters of the sample ID
+        t = t[~t.index.duplicated()].reindex(key.values)
+        d = pd.DataFrame(index=pd.Index(in_net.values, name="sample"))
+        for ep, e in eps.items():
+            d[f"{ep.lower()}_days"] = pd.to_numeric(t[e["time_column"]], errors="coerce").values * e.get("time_to_days", 1)
+            d[f"{ep.lower()}_event"] = pd.to_numeric(t[e["event_column"]], errors="coerce").values
         for new, old in cov.items():
             d[new] = t[old].str.strip().values
-        in_net = samples.loc[samples["cohort"] == cohort, "sample"]
-        d = d[d["sample"].isin(in_net)].set_index("sample").reindex(in_net)
         d.to_csv(os.path.join(outdir, f"survival_{cohort}.tsv"), sep="\t")
-        ok = d.dropna(subset=["os_days", "os_event"])
-        ok = ok[ok["os_days"] > 0]
-        m = pd.DataFrame({"duration": ok["os_days"], "observed": ok["os_event"].astype(int)})
-        m.to_csv(os.path.join(outdir, f"survival_{cohort}_OS_miner.csv"))
-        mh = horizon_censor(m, hm * DAYS_PER_MONTH)
-        mh.to_csv(os.path.join(outdir, f"survival_{cohort}_OS_h{hm}m_miner.csv"))
-        fu = m.loc[m["observed"] == 0, "duration"]
-        log.info("%s: %d network samples, %d with OS; events %d (%.0f%%); within %d months %d; median follow-up of "
-                 "censored %.0f days (max %.0f)", cohort, len(in_net), len(m), m["observed"].sum(), 100 * m["observed"].mean(),
-                 hm, mh["observed"].sum(), fu.median(), m["duration"].max())
+        for ep in eps:
+            ok = d.dropna(subset=[f"{ep.lower()}_days", f"{ep.lower()}_event"])
+            ok = ok[ok[f"{ep.lower()}_days"] > 0]
+            m = pd.DataFrame({"duration": ok[f"{ep.lower()}_days"], "observed": ok[f"{ep.lower()}_event"].astype(int)})
+            m.to_csv(os.path.join(outdir, f"survival_{cohort}_{ep}_miner.csv"))
+            mh = horizon_censor(m, hm * DAYS_PER_MONTH)
+            mh.to_csv(os.path.join(outdir, f"survival_{cohort}_{ep}_h{hm}m_miner.csv"))
+            fu = m.loc[m["observed"] == 0, "duration"]
+            log.info("%s %s: %d network samples, %d with data; events %d (%.0f%%); within %d months %d; median follow-up "
+                     "of censored %.0f days (max %.0f)", cohort, ep, len(in_net), len(m), m["observed"].sum(),
+                     100 * m["observed"].mean(), hm, mh["observed"].sum(), fu.median(), m["duration"].max())
         for c in cov:
             if d[c].nunique() <= 8:
                 log.info("  %s: %s", c, d[c].value_counts(dropna=False).to_dict())
+        m = pd.read_csv(os.path.join(outdir, f"survival_{cohort}_OS_miner.csv"), index_col=0)
 
         import matplotlib
         matplotlib.use("Agg")
