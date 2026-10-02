@@ -19,6 +19,25 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Decisions
 
+- **[2026-10-02] Split-half stability results (step 08b; half-networks built on ~157 tumours each).**
+  | | half A held out | half B held out |
+  |---|---|---|
+  | regulators recovered | 95% | 96% |
+  | regulon membership, median best Jaccard | 0.11 | 0.11 |
+  | program activity r in the held-out half (median) | 0.83 | 0.80 |
+  | same, top-quartile risk-weight programs | 0.84 | 0.81 |
+  | driver → regulator edges recovered (MINER-filtered) | 47% | 37% |
+  | same, high-confidence | 24% | 20% |
+  | risk, FU-iCCA patients of the unseen half: C-index | 0.71 (120 pts, 55 deaths) | 0.76 (124 pts, 39 deaths) |
+  | HR per s.d. | 2.03 | 2.58 |
+  - Same pattern as HCC LOCO: **regulators and program-level activity are reproducible; exact regulon gene membership is
+    not** (median Jaccard 0.11; < 1% of regulons at ≥ 0.5). Analyses should be read at program / regulator level.
+  - **Causal edges are only moderately reproducible** (37–47%), and unevenly by driver: BAP1 47–51%, KRAS 33–46%,
+    TP53 27–46%, IDH 23–41%, FGFR2 fusion 67% vs 11% (about 14 fusion-positive tumours per half). Each half has half the
+    altered tumours, so this is a lower bound, but individual flows should not be over-read without replication.
+  - **Risk generalises within FU-iCCA** when both the network and the model exclude the test half (C 0.71 / 0.76). This is
+    same-cohort, same-centre performance; across cohorts it is lower (surgical GSE244807 0.62, TCGA 0.58, GSE107943 0.68).
+
 - **[2026-10-02] GitHub: `sturkarslan/icc-miner3` created by the user; `main` pushed.** Claude Cloud will supply the ICC
   classifier / subtype gene lists (Sia 2013, Dong 2022, Beaufrère 2024, Job 2020 …); 07c, 07d, the head-to-head and
   the publication figures wait for that panel.
