@@ -25,6 +25,34 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Decisions
 
+- **[2026-10-02] Main configuration = design d374 (user decision).** `config/params.yaml` now has GSE179443 in discovery,
+  `exclude_modules: []` + gene-based technical anchor; identical to the tested d374 config (checked key by key).
+  Folders: `results/` = d374 (was `results_d374/`), `results_d315/` = previous main (with its split-half and FU-only
+  sensitivity runs), `results_d437/` = d433. Configs `config/params_d315.yaml`, `config/params_d437.yaml`.
+  The split-half stability check was run on d315, not yet on d374.
+- **[2026-10-02] Claude Cloud classifier panel merged and run on d374 (07a/07b), plus new step 07g (published classes,
+  head-to-head).**
+  - **Our NTP templates vs the published calls (FU-iCCA; TCGA / GSE244807 for STIM):** Andersen ARI 0.85; STIM 89% exact
+    (ARI 0.76); Lin 2026 81% (0.65); Dong 2022 proteomic 78% (0.52); Oishi ARI 0.47; Sia 2013 poor (67% exact on the 67
+    called, ARI 0.10; Cloud also found Sia calls do not transfer to RNA-seq).
+  - **Every published class level (61) has ≥ 1 enriched MINER state.** High-risk states S1, S3, S10, S11 carry Andersen
+    cluster 2 / Lin SI / large duct; S10–S11 = STIM tumour classical, S1 = inflammatory stroma and Dong S1 (inflammatory);
+    low-risk S0 / S4 / S8 = STIM hepatic stem-like, Dong S4 (differentiated), small duct; S7 (lowest risk) = STIM immune
+    classical; S13 = desert-like.
+  - **Risk score by published class (FU-iCCA, in-sample):** high in Andersen 2, Oishi MH (published label), Dong S1 inflammatory (+1.13) and S2 mesenchymal, Lin SI (+1.34), STIM tumour classical (+1.12) and
+    inflammatory stroma; low in Dong S4 differentiated (−0.81), STIM hepatic stem-like (−0.74), Lin SIII. Job 2020 immune
+    classes do not separate risk (p 0.12). Sia 2013 is inverted (Inflammation +0.44 > Proliferation −0.46) — consistent with
+    the Sia calls not transferring to RNA-seq.
+  - **Head-to-head in the held-out cohorts (`results/07_post/published/head_to_head.tsv`):**
+    - GSE244807 (230 pts, 137 deaths; Cox stratified by specimen): MINER C 0.67, HR/SD 1.59. STIM classes fitted in the cohort
+      C 0.66; Sia 2013 survival signature 0.66; Dong 2022 prognostic biomarkers 0.66. MINER adds to the seven small published
+      iCCA signatures and Fan CORE-37 (LR p ≤ 0.002), but **not** to STIM (p 0.11), Sia survival (0.17), Sia recurrence (0.98)
+      or Dong biomarkers (0.40), while those add to MINER (p < 0.001).
+    - OEP002768 (58 pts, 29 deaths): MINER C 0.69, HR/SD 2.06; Sia recurrence 0.71, Dong biomarkers 0.70, Sia survival 0.69,
+      Lin 2026 classes (fitted) 0.67. MINER adds to Lin classes (p 0.006) and to the small signatures; not to Sia / Dong.
+    - **Conclusion, as in HCC: the network risk score is as good as the best published iCCA signatures, not better.** Several
+      published 4–9-gene signatures do not replicate (C < 0.5 after orienting them in FU-iCCA).
+
 - **[2026-10-02] Discovery designs compared (user: "try 437 and 374 and test").** Configs `config/params_d374.yaml`,
   `config/params_d437.yaml` (results in `results_d374/`, `results_d437/`); comparison `scripts/08d_compare_designs.py` →
   `results/08_validation/design_comparison.tsv`. "437" is 433 in practice: 4 OEP002768 tumours with < 9,000 genes detected
