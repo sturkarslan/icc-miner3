@@ -84,6 +84,24 @@ def load_tsv_log2tpm(cfg, log):
     return tpm
 
 
+def load_fpkm_table(cfg, log):
+    """Gene x sample FPKM table, rescaled to TPM. log2_pseudocount: values are log2(FPKM + this) (GSE179443, whose
+    file is space-delimited with quoted names: sep_regex). Versioned Ensembl IDs are stripped."""
+    df = pd.read_csv(p(cfg["expression"]), sep=cfg.get("sep_regex", "\t"), quotechar='"', index_col=0 if not cfg.get("sep_regex") else None,
+                     engine="python" if cfg.get("sep_regex") else "c")
+    df.index = df.index.astype(str).str.strip('"')            # the python engine keeps quotes with a regex separator
+    df.columns = [str(c).strip('"') for c in df.columns]
+    df = df.apply(pd.to_numeric, errors="coerce")
+    if cfg["id_type"] == "ensembl":
+        df.index = df.index.astype(str).str.replace(r"\.\d+$", "", regex=True)
+    df = df.groupby(level=0).sum() if cfg.get("log2_pseudocount") is None else df[~df.index.duplicated()]
+    if cfg.get("log2_pseudocount") is not None:
+        df = (np.power(2.0, df) - cfg["log2_pseudocount"]).clip(lower=0)
+    tpm = df / df.sum() * 1e6
+    log.info("%s: %d genes x %d samples; FPKM rescaled to TPM (FPKM column-sum median %.3g)", cfg["_name"], *tpm.shape, df.sum().median())
+    return tpm
+
+
 def load_rpkm_table(cfg, log):
     """Gene table with annotation columns, then one RPKM column per sample (GSE107943). RPKM is rescaled
     to TPM (RPKM / sum(RPKM) * 1e6). Sample names come from header_row (0-based data row holding the
@@ -107,7 +125,8 @@ def load_rpkm_table(cfg, log):
 
 LOADERS = {"xena_log2tpm": load_xena_log2tpm, "cbioportal_tpm": load_cbioportal_tpm,
            "rdata_tpm": load_rdata_tpm, "tsv_tpm": load_tsv_tpm,
-           "rpkm_table": load_rpkm_table, "tsv_log2tpm": load_tsv_log2tpm}
+           "rpkm_table": load_rpkm_table, "tsv_log2tpm": load_tsv_log2tpm,
+           "fpkm_table": load_fpkm_table}
 
 
 # ------------------------------------------------------------------ ID mapping
@@ -276,6 +295,10 @@ def select_sample_table(df, cfg, log):
         log.info("%s sample table %s counts: %s", cfg["_name"], col, ann[col].value_counts(dropna=False).to_dict())
         keep &= ann[col].isin(vals)
     ann = ann[keep]
+    for col, lo in (cfg.get("min_filters") or {}).items():       # numeric column >= value
+        ok = pd.to_numeric(ann[col], errors="coerce") >= lo
+        log.info("%s: %d samples dropped with %s < %s", cfg["_name"], int((~ok).sum()), col, lo)
+        ann = ann[ok]
     ann = ann[ann[idc].isin(df.columns)]
     log.info("%s: %d samples pass %s and have expression", cfg["_name"], len(ann), filters)
     df = df[ann[idc].tolist()]

@@ -42,9 +42,16 @@ def main():
     nd = st.loc[ref, "n_genes_detected"]
     E = pd.DataFrame({int(k): z.loc[[g for g in (back.get(x, x) for x in v) if g in z.index], ref].mean()
                       for k, v in mods.items()}).T
-    anchor = E.loc[int(T["anchor_module"])]
     out = q[["n_genes", "n_regulons", "best_marker_program", "best_marker_r", "top_genes"]].copy()
     out["r_genes_detected"] = E.apply(lambda v: np.corrcoef(v, nd)[0, 1], axis=1)
+    if T.get("anchor_module") is None:
+        # automatic anchor: among large modules (>= anchor_min_genes) without marker biology, the one that tracks
+        # genes detected most closely. Check the logged top genes (expected: long nuclear-retained transcripts).
+        c = out[(out["n_genes"] >= T.get("anchor_min_genes", 100)) & (out["best_marker_r"].abs() < T["max_marker_r"])]
+        T["anchor_module"] = int(c["r_genes_detected"].idxmax())
+        log.info("Automatic anchor: module %d (%d genes, r %.2f with genes detected); top genes %s", T["anchor_module"],
+                 c.loc[T["anchor_module"], "n_genes"], c.loc[T["anchor_module"], "r_genes_detected"], c.loc[T["anchor_module"], "top_genes"])
+    anchor = E.loc[int(T["anchor_module"])]
     out["r_anchor"] = E.apply(lambda v: np.corrcoef(v, anchor)[0, 1], axis=1)
     out["technical"] = (out["r_anchor"] >= T["min_r_anchor"]) & (out["best_marker_r"].abs() < T["max_marker_r"])
     out.to_csv(os.path.join(mdir, "module_qc", "technical_modules.tsv"), sep="\t", float_format="%.3f")

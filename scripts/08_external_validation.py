@@ -52,7 +52,34 @@ def load_tpm_geo(cfg, log):
     return np.log2(x.groupby(level=0).sum() + 1), clin
 
 
-LOADERS = {"tpm_geo": load_tpm_geo}
+def load_fpkm_symbols(cfg, log):
+    """FPKM table with gene symbols + a sample table (OEP002768 as a held-out cohort). keep_column: boolean column
+    that must be False (overlap with the discovery cohort). Symbols -> Ensembl through the network's genes.tsv."""
+    x = pd.read_csv(p(cfg["expression"]), sep="\t", index_col=0)
+    s = pd.read_csv(p(cfg["sample_table"]), sep="\t").set_index(cfg["sample_id_column"])
+    if cfg.get("exclude_column"):
+        s = s[~s[cfg["exclude_column"]].astype(bool)]
+    for col, lo in (cfg.get("min_filters") or {}).items():
+        s = s[pd.to_numeric(s[col], errors="coerce") >= lo]
+    x = x[s.index]
+    g = pd.read_csv(os.path.join(p(cfg["_res"]), "01_harmonized", "genes.tsv"), sep="\t")
+    m = g.drop_duplicates("symbol").set_index("symbol")["ensembl"]
+    x = x.loc[x.index.intersection(m.index)]
+    x.index = m[x.index].values
+    x = x / x.sum() * 1e6
+    clin = pd.DataFrame(index=s.index)
+    for ep, e in cfg["survival"].items():
+        clin[f"{ep}_time"] = pd.to_numeric(s[e["time_column"]], errors="coerce") * e.get("time_to_days", 1)
+        clin[f"{ep}_event"] = pd.to_numeric(s[e["event_column"]], errors="coerce")
+    for c in s.columns:
+        if c.startswith("mut_") or c in ("fusion_FGFR2", "duct_type", "stage"):
+            clin[c] = s[c]
+    clin["n_genes_detected"] = (x >= 1).sum().values
+    log.info("%s: %d genes x %d samples", cfg["_name"], *x.shape)
+    return np.log2(x + 1), clin
+
+
+LOADERS = {"tpm_geo": load_tpm_geo, "fpkm_symbols": load_fpkm_symbols}
 
 
 def zrows(x):
@@ -144,7 +171,7 @@ def main():
 
     rows = []
     for name in (args.cohorts.split(",") if args.cohorts else list(V["cohorts"])):
-        cfg = dict(V["cohorts"][name], _name=name)
+        cfg = dict(V["cohorts"][name], _name=name, _res=res)
         outdir = os.path.join(outroot, name)
         os.makedirs(outdir, exist_ok=True)
         x, clin = LOADERS[cfg["loader"]](cfg, log)

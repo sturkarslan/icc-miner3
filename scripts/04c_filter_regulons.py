@@ -34,6 +34,11 @@ def main():
     log = setup_logging(os.path.join(mdir, "mechinf"), "04c_filter_regulons")
 
     exclude = [str(m) for m in M["exclude_modules"]]
+    tf = os.path.join(mdir, "module_qc", "technical_modules.tsv")
+    if not exclude and os.path.exists(tf):      # designs without a hand-set list: use step 04b_technical_modules
+        t = pd.read_csv(tf, sep="\t", index_col=0)
+        exclude = [str(m) for m in t.index[t["technical"]]]
+        log.info("exclude_modules empty in params: using %d technical modules from %s", len(exclude), tf)
     min_frac = float(M.get("exclude_min_fraction", 0.5))
     # Module membership in MINER IDs, from the modules mechinf itself used
     mods = json.load(open(os.path.join(mdir, "mechinf", "coexpressionDictionary.json")))

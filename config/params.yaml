@@ -221,6 +221,16 @@ validation:
       tech_covariate: true           # also adjust for genes detected per sample
       covariates: {sex: 'ch:gender', age: 'ch:age at_the_time_of_sampling'}
       endpoints: [OS]
+    OEP002768:                       # FU-CCA (Deng 2023), iCCA tumours not shared with FU-iCCA; FPKM, symbols; OS; WES drivers
+      loader: fpkm_symbols
+      expression: data/OEP002768/tables/expression_fpkm_icca.tsv
+      sample_table: data/OEP002768/tables/samples_icca.tsv
+      sample_id_column: sample
+      exclude_column: overlap_fu     # same patients as FU-iCCA: never used as validation
+      min_filters: {n_genes_detected: 9000}
+      survival:
+        OS: {time_column: os_days, event_column: os_event, time_to_days: 1}
+      endpoints: [OS]
 
 # ---------------------------------------------------------------- step 07 (subtype / signature mapping)
 post:

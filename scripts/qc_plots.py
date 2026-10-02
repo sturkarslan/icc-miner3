@@ -51,8 +51,8 @@ def cohort_colors(cohorts):
     except Exception:
         order = []
     order += [c for c in cohorts if c not in order]
-    if len(order) > 3:
-        raise ValueError("more than 3 cohorts: facet instead of adding scatter colours")
+    if len(order) > len(SLOTS):      # ICC designs have up to 5 cohorts; QC figures only
+        raise ValueError(f"more than {len(SLOTS)} cohorts: facet instead of adding scatter colours")
     return {c: SLOTS[order.index(c)] for c in cohorts}
 
 

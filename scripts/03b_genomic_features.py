@@ -86,16 +86,35 @@ def main():
         by_gene = by_gene.combine(tk.groupby("gene")["sample"].apply(set), lambda a, b: (a if isinstance(a, set) else set())
                                   | (b if isinstance(b, set) else set()), fill_value=set())
         wes = wes + seq
+    # OEP002768 (when in the network): per-patient driver table (24 genes; Table S1 sheet 2) and RNA-seq FGFR2 fusions.
+    # Genes outside that table are not profiled for OEP samples (left empty), handled per gene below.
+    oep = samples.loc[samples["cohort"] == "OEP002768", "sample"].tolist()
+    oep_genes, oep_fus, oep_rna = {}, set(), []
+    if oep and G.get("OEP002768", {}).get("sample_table"):
+        o = pd.read_csv(p(G["OEP002768"]["sample_table"]), sep="\t").set_index("sample").reindex(oep)
+        oep_rna = oep
+        oep_fus = set(o.index[o["fusion_FGFR2"] == 1])
+        for c in [c for c in o.columns if c.startswith("mut_")]:
+            oep_genes[c[4:]] = (set(o.index[o[c].notna()]), set(o.index[o[c] == 1]))
+        log.info("OEP002768: %d network samples, %d with WES driver calls, %d genes", len(oep), int(o["mut_TP53"].notna().sum()), len(oep_genes))
+
+    def gene_sets(g):
+        prof, alt = oep_genes.get(g, (set(), set()))
+        return by_gene.get(g, set()) | alt, wes + sorted(prof)
+
     for g in G["driver_genes"]:
-        add(f"MUT_{g}", "gene_mutation", by_gene.get(g, set()), wes)
+        add(f"MUT_{g}", "gene_mutation", *gene_sets(g))
     for pw, genes in G["pathways"].items():
-        add(f"PATH_{pw}", "pathway_mutation", set().union(*[by_gene.get(g, set()) for g in genes]), wes)
+        # an OEP sample is profiled for a pathway when all member genes are in its driver table
+        full = set.intersection(*[oep_genes.get(g, (set(), set()))[0] for g in genes]) if oep_genes else set()
+        add(f"PATH_{pw}", "pathway_mutation", set().union(*[gene_sets(g)[0] for g in genes]), wes + sorted(full))
 
     # ---- fusions
     f = pd.read_csv(p(G["fusions"]), sep="\t", skiprows=1, dtype=str)
     f["sample"] = pre + f["Sample_ID"].str.strip()
     for g in G["fusion_genes"]:
-        add(f"FUS_{g}", "fusion", set(f.loc[(f["LeftGene"] == g) | (f["RightGene"] == g), "sample"]), rna)
+        add(f"FUS_{g}", "fusion", set(f.loc[(f["LeftGene"] == g) | (f["RightGene"] == g), "sample"]) | (oep_fus if g == "FGFR2" else set()),
+            rna + (oep_rna if g == "FGFR2" else []))
 
     # ---- copy number (gene-level log2 ratio)
     cn = pd.read_csv(p(G["cna_gene"]), sep="\t", skiprows=1, low_memory=False).dropna(axis=1, how="all")
