@@ -198,3 +198,22 @@ risk:
     max_alpha: 5000
     alpha_step: 100
     seed: 12
+
+# ---------------------------------------------------------------- step 08 (external validation)
+validation:
+  horizon_days: 1096                 # 36 months, as in discovery
+  top_fraction: 0.2
+  min_regulon_coverage: 0.5
+  models: [FU_iCCA_OS_h36m]          # step-06 ridge program model (weights never refit)
+  cohorts:
+    GSE244807:                       # Beaufrere et al. 2024; 246 iCCA, 137 biopsies + 109 surgical specimens, OS
+      loader: tpm_geo
+      expression: data/GSE244807/suppl/GSE244807_kallistoGeneAbund_geo.tsv.gz
+      sample_table: data/GSE244807/samples_geo.tsv
+      sample_id_column: 'ch:sample id'
+      survival:
+        OS: {time_column: 'ch:os', event_column: 'ch:death', time_to_days: 30.44}
+      strata_column: 'ch:tissue'     # biopsy vs surgical: technical and clinical confounder, always reported separately
+      tech_covariate: true           # also adjust for genes detected per sample
+      covariates: {sex: 'ch:gender', age: 'ch:age at_the_time_of_sampling'}
+      endpoints: [OS]

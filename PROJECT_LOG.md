@@ -19,6 +19,24 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Decisions
 
+- **[2026-10-02] Steps 06 and 08: risk model and first external validation.**
+  - **Prognostic units (FU-iCCA OS, 36 months; 244 patients, 94 deaths):** 1,827 of 3,572 regulons and 93 of 164 programs at
+    q ≤ 0.1 in FU-iCCA alone; with the same sign in TCGA and GSE107943: 1,402 regulons (1,182 adverse), 67 programs
+    (59 adverse). The two small cohorts have no significant unit on their own (12 and 14 events).
+  - **Ridge on 164 program activities, trained in FU-iCCA (primary model, as in HCC):** in-sample C 0.75 (optimistic).
+    TCGA-CHOL: C 0.58, HR/SD 1.95 (0.88–4.31), p 0.10. GSE107943: C 0.68, HR/SD 2.27 (1.22–4.21), p 0.010; stage-adjusted 2.48.
+    Both cohorts were in the (unsupervised) network but not in risk training. Ridge on regulons is similar (0.61 / 0.68).
+    MINER xgboost: GSE107943 C 0.77, TCGA 0.53 (unstable with 30 samples).
+  - **External, GSE244807 (step 08 rewritten for ICC; `hcc_08_external_validation.py` keeps the HCC version):**
+    all 3,572 regulons scored. Overall C 0.65, HR/SD 1.67 (1.38–2.02), p 1e-7, top 20% HR 2.98, **but the risk score
+    correlates r 0.75 with genes detected in this cohort**, and specimen type is tied to both, so the overall figure is
+    inflated. Honest estimates: Cox stratified by specimen HR/SD 1.32 (p 0.025); also adjusted for genes detected 1.73
+    (p 2e-4); surgical specimens only (n 103, 42 deaths) C 0.62, HR/SD 1.50 (1.06–2.13), p 0.022; biopsies only
+    (n 127, 95 deaths) C 0.57, HR/SD 1.14, p 0.27. **Reading: the model transfers to resected tumours (the population it
+    was trained on) with a modest effect, and not convincingly to biopsies of unresectable disease.**
+  - Still to do: ICC signature panel and subtype mapping (step 07), head-to-head against published ICC classifiers,
+    split-half stability of network / causal flows, GSE255058 response test, GSE32225 class check, figures (step 09).
+
 - **[2026-10-02] Steps 04–05 on the 315-tumour network.**
   - **MINER (04):** 4,029 regulons, 405 regulators, 9,414 regulon genes, 202 programs, 16 states (45 min).
     FU-iCCA-only sensitivity run: 5,031 regulons, 444 regulators, 221 programs, 18 states.
