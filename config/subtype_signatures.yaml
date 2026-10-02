@@ -1,8 +1,11 @@
 # Signatures for mapping ICC MINER states and programs (steps 07a/07b). Gene lists are never typed in here: they
 # come from MSigDB GMT files or config/subtype_signatures_custom.tsv (supplementary tables; copied from the HCC
 # project). ICC-specific classifiers still missing because their gene lists are not on the server:
-# Sia 2013 proliferation / inflammation classes, Dong 2022 S1-S4 proteomic subgroups, Beaufrere 2024 five classes,
-# Job 2020 tumour-microenvironment classes. Add them to the custom TSV when the supplementary tables are available.
+# Sia 2013 proliferation / inflammation classes, Dong 2022 S1-S4 proteomic subgroups, the five STIM classes
+# (Martin-Serrano, Gut 2023; the "Beaufrere five classes", which Beaufrere et al. assigned to GSE244807),
+# Job 2020 tumour-microenvironment classes; recommended additions Chaisaingmongkol 2017 C1/C2, Fan 2024 30-gene
+# CCA classifier, Song 2022 large- / small-duct. Sources: config/signature_sources.yaml, fetched and inventoried by
+# scripts/tools/fetch_signature_sources.py; one extract_<paper>_signatures.py per paper then fills the custom TSV.
 
 msigdb:
   release: 2024.1.Hs

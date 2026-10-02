@@ -7,8 +7,11 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Open questions
 
-- **ICC classifier gene lists** (Sia 2013, Dong 2022 S1–S4, Beaufrère 2024, Job 2020) are to come from Claude Cloud; add
-  to `config/subtype_signatures_custom.tsv` and build `config/reference_panel.yaml` for ICC, then adapt 07c / 07d / 09.
+- **ICC classifier gene lists** (Sia 2013, Dong 2022 S1–S4, STIM five classes, Job 2020 + recommended additions; see
+  the 2026-10-02 classifier-panel entry) are still to extract. Run `scripts/tools/fetch_signature_sources.py` on the
+  login node and push `docs/signature_sources_inventory.md` (or open the Cloud network to PMC / publishers); then
+  one extraction script per paper fills `config/subtype_signatures_custom.tsv`, then `config/reference_panel.yaml`
+  for ICC and 07c / 07d / 09.
 - **GC-rich chromosome arms look unreliable in the FU-iCCA copy-number table** (17p/q, 19p/q, 22q; see step 03b entry).
   Decide at step 05 whether to drop them or correct for a per-sample GC component.
 - NODE cohorts OEP002768 (validation) and OEP002560 (multi-region) are still not downloaded.
@@ -18,6 +21,28 @@ is never mixed into the HCC network. Newest entries first. Everything is written
   as in HCC; replacements (split-half / bootstrap stability, validation-cohort replication) to be set at steps 05–06.
 
 ## Decisions
+
+- **[2026-10-02] ICC classifier panel reviewed; sources registered (`config/signature_sources.yaml`).** Claude Cloud
+  could not extract the gene lists this time: the Cloud environment's network policy blocks PMC, Europe PMC, NCBI,
+  HAL and the publisher sites (only GitHub is reachable). New `scripts/tools/fetch_signature_sources.py` resolves
+  each paper (NCBI ID converter, title logged), downloads the supplements (Europe PMC zip → PMC page → Elsevier
+  mmc via Crossref PII) into `data/papers/<key>/`, and writes `docs/signature_sources_inventory.md` (sheets, first
+  rows, gene-symbol-like columns; FU-iCCA `manual/` tables included for the Dong subgroup labels).
+  - **"Beaufrère five classes" are the STIM classes of Martin-Serrano et al., Gut 2023** (immune classical, inflammatory
+    stroma; hepatic stem-like, tumour classical, desert-like). The gene lists come from Martin-Serrano; Beaufrère et al.
+    (JHEP Reports 2025, PMC12800354) assigned them to GSE244807 (hepatic stem-like 90 / 246), so their per-sample
+    labels are a check of our STIM calls in GSE244807, as Andersen was for GSE107943. The PMID 39242455 given for
+    GSE244807 in the cohort table was not confirmed.
+  - Panel (priority 1 = requested): Sia 2013 Proliferation / Inflammation (+ GSE32225 labels); STIM five classes;
+    Job 2020 I1–I4 (14 TME signatures); Dong 2022 S1–S4 (per-patient labels for FU-iCCA, our discovery cohort, so
+    compared directly; protein markers). Priority 2: Chaisaingmongkol 2017 TIGER-LC C1 / C2 (shared HCC / iCCA;
+    GSE76297 is on the server); Fan 2024 Nat Commun two CCA subtypes (30-gene classifier, CORE-37 prognostic);
+    Song 2022 large-duct (S100P) vs small-duct (SPP1), needed because our risk score follows that axis.
+    Priority 3: Lin 2026 Cell Rep Med LIHV 1,341-gene set / five subtypes (multi-region).
+    Kept from MSigDB: Andersen 2012, Oishi 2012. Not used as expression templates: Nakamura 2015, Jusakul 2017
+    (genomic / methylation clusters), Farshidfar 2017 (IDH is a driver feature), Montal 2020 (extrahepatic).
+  - Fallback if a supplement has no gene list: derive class templates from the authors' labels (GSE32225 for Sia,
+    FU-iCCA for Dong, GSE244807 for STIM) and say so in the set's reference column.
 
 - **[2026-10-02] GitHub: `sturkarslan/icc-miner3` created by the user; `main` pushed.** Claude Cloud will supply the ICC
   classifier / subtype gene lists (Sia 2013, Dong 2022, Beaufrère 2024, Job 2020 …); 07c, 07d, the head-to-head and
