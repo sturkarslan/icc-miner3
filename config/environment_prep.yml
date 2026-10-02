@@ -1,0 +1,18 @@
+# Preprocessing env for steps 01-02 (ComBat via inmoose). Create on the server with:
+#   mamba env create -p envs/hcc-prep -f config/environment_prep.yml
+name: hcc-prep
+channels: [conda-forge]
+dependencies:
+  - python=3.11
+  - pandas
+  - numpy>=2
+  - scipy
+  - scikit-learn
+  - matplotlib>=3.9
+  - pyyaml
+  - openpyxl
+  - pyreadr
+  - pip
+  - pip:
+      - inmoose
+      - lifelines

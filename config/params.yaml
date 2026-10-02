@@ -1,0 +1,68 @@
+# ICC (intrahepatic cholangiocarcinoma) MINER pipeline parameters. Paths are relative to the project
+# root (/proj/omics4tb2/sturkarslan/ICC). Same pipeline as the HCC project (hcc-miner3); sections are
+# added here as each step is adapted to ICC.
+
+paths:
+  data: data
+  results: results
+
+# ---------------------------------------------------------------- step 01
+cohorts:
+  # FU_iCCA (Dong et al., Cancer Cell 2022; NODE OEP001105) is the planned main cohort with WES.
+  # Needs a manual NODE download into data/FU_iCCA/manual/; add its block here when the files arrive.
+  GSE244807:
+    # Beaufrere et al. (PMID 39242455), 246 iCCA, kallisto gene TPM, unversioned Ensembl IDs.
+    # 137 biopsies + 109 surgical specimens: tissue type is carried as a label (technical and clinical axis).
+    expression: data/GSE244807/suppl/GSE244807_kallistoGeneAbund_geo.tsv.gz
+    format: tsv_tpm
+    id_type: ensembl
+    sample_table: data/GSE244807/samples_geo.tsv
+    sample_id_column: 'ch:sample id'
+    label_columns: {specimen: 'ch:tissue'}
+  TCGA:
+    # UCSC Xena GDC hub; log2(TPM + 1), versioned Ensembl IDs (GENCODE v36)
+    expression: data/TCGA_CHOL/TCGA-CHOL.star_tpm.tsv.gz
+    format: xena_log2tpm
+    pseudocount: 1
+    id_type: ensembl
+    sample_regex: '^TCGA-..-....-01A'
+    # non-intrahepatic cases (GDC tissue_or_organ_of_origin), written from data/TCGA_CHOL/gdc_cases.tsv
+    exclude_list: config/tcga_exclude.tsv
+  GSE107943:
+    # Ahn et al. (PMID 30941318), 30 iCCA tumours + 27 adjacent liver; RPKM rescaled to TPM
+    expression: data/GSE107943/suppl/GSE107943_RPKM.txt.gz
+    format: rpkm_table
+    id_column: Ensenble
+    first_sample_column: s_081124004_001_RPKM
+    header_row: 0                     # first data row holds the sample labels (1T, 1N, ...)
+    id_type: ensembl
+    sample_table: data/GSE107943/samples_geo.tsv
+    sample_id_column: title
+    sample_prefix: 'GSE107943_'
+    keep_filters:
+      'ch:tissue': ['Tumor (Intrahepatic cholangiocarcinoma)']
+    label_columns: {author_class: 'ch:class', pathologic_type: 'ch:pathologic type'}
+
+id_mapping:
+  gencode_probemap: data/reference/gencode.v36.annotation.gtf.gene.probemap
+  miner_idmap: /users/sturkars/mambaforge/envs/miner3/lib/python3.11/site-packages/miner/data/identifier_mappings.txt
+  hgnc: data/reference/hgnc_complete_set.txt
+
+harmonize:
+  renormalize_tpm: true
+  min_tpm: 1.0
+  min_frac: 0.2
+  protein_coding_only: false
+
+# ---------------------------------------------------------------- step 02
+batch:
+  methods: [combat, cohort_z]
+  combat_parametric: true
+  z_clip_low: -4.0
+  qc:
+    n_pcs: 20
+    programs:
+      biliary: [KRT19, KRT7, SOX9, EPCAM, CFTR, SPP1, MUC1]
+      proliferation: [MKI67, TOP2A, BIRC5, CCNB1, CDK1, BUB1, AURKA]
+      hepatocyte: [ALB, APOA1, CYP3A4, CYP2E1, TTR, SERPINA1]
+      stroma: [COL1A1, COL1A2, ACTA2, FAP, POSTN, DCN]

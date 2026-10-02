@@ -1,0 +1,14 @@
+# TCGA-CHOL cases that are not intrahepatic (GDC diagnoses.tissue_or_organ_of_origin), from data/TCGA_CHOL/gdc_cases.tsv
+# patient	site
+TCGA-3X-AAVB	Extrahepatic bile duct
+TCGA-3X-AAVC	Extrahepatic bile duct
+TCGA-5A-A8ZF	nan
+TCGA-5A-A8ZG	nan
+TCGA-W5-AA2M	Extrahepatic bile duct
+TCGA-W5-AA2X	Extrahepatic bile duct
+TCGA-W7-A93N	Extrahepatic bile duct
+TCGA-W7-A93O	Head of pancreas
+TCGA-W7-A93P	Extrahepatic bile duct
+TCGA-WD-A7RX	Liver
+TCGA-YR-A95A	Extrahepatic bile duct
+TCGA-ZK-AAYZ	nan
