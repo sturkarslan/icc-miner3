@@ -1,11 +1,12 @@
 #!/bin/bash
-# Submit the full leave-one-cohort-out chain from the project root: bash scripts/slurm/08b_loco_submit.sh
+# ICC: split-half chain (held-out half A, then B). Was the leave-one-cohort-out chain in HCC.
+# Submit the chain from the project root: bash scripts/slurm/08b_loco_submit.sh
 # per held-out cohort: prepare -> MINER mechinf -> technical-regulon filter -> MINER subtypes_filtered -> causal;
 # then one comparison job after all three.
 set -euo pipefail
 S=scripts/slurm
 last=()
-for H in TCGA CLCA LICA_FR; do
+for H in A B; do
   M=loco_no$H
   a=$(sbatch --parsable -J loco_prep_$H $S/08b_loco_hccprep.sbatch prepare --held $H)
   b=$(sbatch --parsable -J loco_mech_$H --dependency=afterok:$a $S/04_run_miner.sbatch --matrix $M --steps mechinf)

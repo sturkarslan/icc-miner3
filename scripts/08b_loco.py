@@ -1,7 +1,12 @@
 #!/usr/bin/env python
-"""Step 08b: leave-one-cohort-out (LOCO) stability of the network, programs, causal flows and risk.
+"""Step 08b (ICC): split-half stability of the network, programs, causal flows and risk.
 
-For each held-out discovery cohort H (TCGA, CLCA, LICA_FR), matrix name loco_no<H>:
+ICC has one large discovery cohort, so leave-one-cohort-out (HCC step 08b) is replaced by a split-half design:
+the 315 tumours are split at random into halves A and B, stratified by cohort (validation.split.seed;
+results/08_validation/split/halves.tsv). For each held-out half H, matrix name loco_no<H> (network built
+WITHOUT half H; the name is kept so the HCC code paths are unchanged). Risk: ridge on the half-network's
+programs trained on FU-iCCA patients of the kept half (OS), scored in FU-iCCA patients of the held-out half.
+Original HCC description of the stages:
   prepare   (hcc-prep env) ComBat + gene z-score on the two remaining cohorts only (same genes as step 01,
             same settings as step 02) -> results/02_batch_corrected/expression_loco_no<H>_z.csv.
             H contributes nothing to batch correction, network or causal inference.
@@ -30,7 +35,25 @@ import pandas as pd
 
 from hcc_common import load_params, miner_id_backmap, p, setup_logging
 
-COHORTS = ["TCGA", "CLCA", "LICA_FR"]
+COHORTS = ["A", "B"]          # halves; "held" = the half left out of the network
+OUTSUB = "split"
+
+
+def halves(P, log=None):
+    """sample -> half (A/B), stratified by cohort; written once and reused."""
+    res = p(P["paths"]["results"])
+    f = os.path.join(res, "08_validation", OUTSUB, "halves.tsv")
+    if os.path.exists(f):
+        return pd.read_csv(f, sep="\t", index_col=0)["half"]
+    samples = pd.read_csv(os.path.join(res, "01_harmonized", "samples.tsv"), sep="\t", index_col="sample")
+    rng = np.random.default_rng(int(P["validation"].get("split", {}).get("seed", 12)))
+    h = pd.Series("A", index=samples.index, name="half")
+    for c, idx in samples.groupby("cohort").groups.items():
+        idx = rng.permutation(list(idx))
+        h[idx[len(idx) // 2:]] = "B"
+    os.makedirs(os.path.dirname(f), exist_ok=True)
+    h.to_frame().to_csv(f, sep="\t")
+    return h
 
 
 def zrows(x):
@@ -47,7 +70,8 @@ def prepare(P, held, log):
     res = p(P["paths"]["results"])
     expr = pd.read_csv(os.path.join(res, "01_harmonized", "expression_log2tpm1.csv"), index_col=0)
     samples = pd.read_csv(os.path.join(res, "01_harmonized", "samples.tsv"), sep="\t", index_col="sample")
-    keep = samples.index[samples["cohort"] != held]
+    half = halves(P, log)
+    keep = samples.index[half.reindex(samples.index) != held]
     expr = expr[keep]
     batch = samples.loc[keep, "cohort"]
     zero = pd.concat([expr.loc[:, batch == b].var(axis=1) == 0 for b in batch.unique()], axis=1).any(axis=1)
@@ -117,7 +141,8 @@ def compare(P, log):
     from sklearn.linear_model import Ridge
     res = p(P["paths"]["results"])
     M, R = P["miner"], P["risk"]
-    outdir = os.path.join(res, "08_validation", "loco")
+    outdir = os.path.join(res, "08_validation", OUTSUB)
+    half = halves(P, log)
     genes = pd.read_csv(os.path.join(res, "01_harmonized", "genes.tsv"), sep="\t", index_col="ensembl")
     back = miner_id_backmap(p(M["idmap"]), genes.index)
     sym = genes["symbol"]
@@ -126,7 +151,7 @@ def compare(P, log):
     reg0, regr0, progs0, pg0 = load_net(res, M["matrix"], back)
     hc0 = pd.read_csv(os.path.join(res, "05_causal", M["matrix"], "highConfidenceCausalResults.csv"), index_col=0)
     e0 = set(zip(hc0["Mutation"], hc0["regulator_symbol"], np.sign(hc0["MutationRegulatorEdge"])))
-    w0 = pd.read_csv(os.path.join(res, "06_risk", M["matrix"], "predictor_ridge_programs_TCGA_RFS_h36m", "weights.tsv"),
+    w0 = pd.read_csv(os.path.join(res, "06_risk", M["matrix"], "predictor_ridge_programs_FU_iCCA_OS_h36m", "weights.tsv"),
                      sep="\t", index_col=0)["weight"].rename(index=str)
     rows, prog_rows = [], []
     for held in COHORTS:
@@ -145,7 +170,9 @@ def compare(P, log):
         # regulons weighted by the risk model's programs: are adverse/protective programs' regulons recovered?
         pj = best_jaccard(pg0, pg)
         # program activity in the held-out cohort (its own within-cohort z), full vs best LOCO match
-        zh = zrows(expr.loc[:, samples.index[samples["cohort"] == held]])
+        hs = samples.index[half.reindex(samples.index) == held]
+        zh = pd.concat([zrows(expr.loc[:, [s for s in hs if samples.loc[s, "cohort"] == c]]) for c in samples["cohort"].unique()],
+                       axis=1).fillna(0)
         act = lambda gs: zh.loc[[g for g in gs if g in zh.index]].mean()  # noqa: E731
         for k, (j, kb) in pj.items():
             rr = np.corrcoef(act(pg0[k]), act(pg[kb]))[0, 1] if kb is not None else np.nan
@@ -168,20 +195,21 @@ def compare(P, log):
             eh = set(zip(hl["Mutation"], hl["regulator_symbol"], np.sign(hl["MutationRegulatorEdge"])))
             r.update(causal_full_edges_testable=len(e0d), causal_edges_recovered_filtered=len(e0d & ef) / max(len(e0d), 1),
                      causal_edges_recovered_highconf=len(e0d & eh) / max(len(e0d), 1))
-            for d in ("MUT_CTNNB1", "MUT_TP53", "MUT_AXIN1"):
+            for d in ("MUT_KRAS", "MUT_TP53", "PATH_IDH", "MUT_BAP1", "FUS_FGFR2"):
                 ed = {e for e in e0d if e[0] == d}
                 if ed:
                     r[f"causal_{d}_recovered_filtered"] = len(ed & ef) / len(ed)
         # risk: LOCO programs -> ridge trained in the other survival cohort -> scored in the held-out cohort
-        if held in ("TCGA", "CLCA"):
-            train = "CLCA" if held == "TCGA" else "TCGA"
+        if True:
+            train = "FU_iCCA"
             zl = pd.read_csv(os.path.join(res, "02_batch_corrected", f"expression_{mx}_z.csv"), index_col=0)
-            tr_ids = samples.index[samples["cohort"] == train]
+            tr_ids = samples.index[(samples["cohort"] == train) & (half.reindex(samples.index) != held)]
             Xtr = pd.DataFrame({k: zl.loc[[g for g in v if g in zl.index], tr_ids].mean() for k, v in pg.items()}).T
             Xte = pd.DataFrame({k: zh.loc[[g for g in v if g in zh.index]].mean() for k, v in pg.items()}).T
-            for ep in ("RFS", "OS") if train == "TCGA" else ("RFS",):
+            for ep in ("OS",):
                 s = pd.read_csv(os.path.join(res, "03_genomics_clinical", f"survival_{train}_{ep}_h36m_miner.csv"), index_col=0)
                 s.columns = ["duration", "observed"]
+                s = s.loc[s.index.intersection(tr_ids)]
                 g = miner.guanRank(miner.kmAnalysis(s.copy(), "duration", "observed"))
                 Xs = Xtr.sub(Xtr.mean(1), axis=0).div(Xtr.std(1).replace(0, 1), axis=0)
                 np.random.seed(R["ridge"]["seed"])
@@ -195,9 +223,10 @@ def compare(P, log):
                 mdl = Ridge(alpha=alpha, random_state=0).fit(Xs[ids].T.values, y)
                 Xt = zrows(Xte)
                 sc = pd.Series(mdl.predict(Xt.fillna(0).T.values), index=Xt.columns)
-                st = pd.read_csv(os.path.join(res, "03_genomics_clinical", f"survival_{held}_{ep}_h36m_miner.csv"), index_col=0)
+                st = pd.read_csv(os.path.join(res, "03_genomics_clinical", f"survival_{train}_{ep}_h36m_miner.csv"), index_col=0)
                 st.columns = ["duration", "observed"]
-                st = st.loc[st.index.intersection(sc.index)]
+                st = st.loc[st.index.intersection(sc.index)]       # FU-iCCA patients of the held-out half only
+                r[f"risk_{ep}_n_train"], r[f"risk_{ep}_n_test"], r[f"risk_{ep}_events_test"] = len(g), len(st), int(st["observed"].sum())
                 zz = (sc[st.index] - sc[st.index].mean()) / sc[st.index].std()
                 c = CoxPHFitter().fit(st.assign(x=zz), "duration", "observed").summary.loc["x"]
                 r[f"risk_{ep}_train_{train}_c_index"] = concordance_index(st["duration"], -sc[st.index], st["observed"])
@@ -210,10 +239,7 @@ def compare(P, log):
     S = pd.DataFrame(rows)
     S.to_csv(os.path.join(outdir, "loco_summary.tsv"), sep="\t", index=False, float_format="%.4g")
     PR = pd.DataFrame(prog_rows)
-    PR["label"] = PR["program"].map(pd.read_csv(p("config/program_labels.tsv"), sep="\t", comment="#",
-                                                dtype={"program": str}).set_index("program")["label"])
     PR.to_csv(os.path.join(outdir, "loco_programs.tsv"), sep="\t", index=False, float_format="%.4g")
-    figure(S, PR, os.path.join(outdir, "figures"))
 
 
 def plt_close():
@@ -276,7 +302,7 @@ def main():
     ap.add_argument("--params", default=None)
     args = ap.parse_args()
     P = load_params(args.params)
-    log = setup_logging(p(os.path.join(P["paths"]["results"], "08_validation", "loco")),
+    log = setup_logging(p(os.path.join(P["paths"]["results"], "08_validation", OUTSUB)),
                         f"08b_loco_{args.action}{'_' + args.held if args.held else ''}")
     {"prepare": lambda: prepare(P, args.held, log), "filter": lambda: filt(P, args.held, log),
      "compare": lambda: compare(P, log)}[args.action]()

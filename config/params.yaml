@@ -205,6 +205,10 @@ validation:
   top_fraction: 0.2
   min_regulon_coverage: 0.5
   models: [FU_iCCA_OS_h36m]          # step-06 ridge program model (weights never refit)
+  split: {seed: 12}                  # step 08b split-half stability (halves stratified by cohort)
+  response:                          # step 08c: treatment-response test sets (scored only)
+    GSE255058: {expression: data/GSE255058/suppl/GSE255058_Processed_Data_FPKM.xlsx, id_column: Ensembl_gene_id,
+                responder_prefix: Responder}
   cohorts:
     GSE244807:                       # Beaufrere et al. 2024; 246 iCCA, 137 biopsies + 109 surgical specimens, OS
       loader: tpm_geo

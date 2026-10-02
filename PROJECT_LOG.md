@@ -7,8 +7,8 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Open questions
 
-- **GitHub repository not created yet.** The server has no `gh` CLI or API token (SSH key only), so the repo cannot be
-  created from here. Once an empty `sturkarslan/icc-miner3` exists, `git push -u origin main` publishes it (remote is set).
+- **ICC classifier gene lists** (Sia 2013, Dong 2022 S1–S4, Beaufrère 2024, Job 2020) are to come from Claude Cloud; add
+  to `config/subtype_signatures_custom.tsv` and build `config/reference_panel.yaml` for ICC, then adapt 07c / 07d / 09.
 - **GC-rich chromosome arms look unreliable in the FU-iCCA copy-number table** (17p/q, 19p/q, 22q; see step 03b entry).
   Decide at step 05 whether to drop them or correct for a per-sample GC component.
 - NODE cohorts OEP002768 (validation) and OEP002560 (multi-region) are still not downloaded.
@@ -18,6 +18,21 @@ is never mixed into the HCC network. Newest entries first. Everything is written
   as in HCC; replacements (split-half / bootstrap stability, validation-cohort replication) to be set at steps 05–06.
 
 ## Decisions
+
+- **[2026-10-02] GitHub: `sturkarslan/icc-miner3` created by the user; `main` pushed.** Claude Cloud will supply the ICC
+  classifier / subtype gene lists (Sia 2013, Dong 2022, Beaufrère 2024, Job 2020 …); 07c, 07d, the head-to-head and
+  the publication figures wait for that panel.
+- **[2026-10-02] Step 08c: response test, GSE255058 (18 pre-treatment biopsies, 9 responders): negative.** Risk score AUC
+  0.47 (p 0.86). No program differs at nominal p < 0.05 (0 of 164; 8 expected by chance). Closest: P105 and P103
+  (AUC 0.78, p 0.052); P105 is the program that overlaps the nivolumab-responder / immune signature. Underpowered;
+  report as no evidence.
+- **[2026-10-02] Step 08b replaced by split-half stability** (`08b_loco.py` adapted; matrices keep the name `loco_no<H>`
+  with H = half A or B; outputs in `results/08_validation/split/`). Halves are stratified by cohort (seed 12). Each
+  half-network: ComBat → MINER → technical filter → programs → causal. Compared with the full network: regulators,
+  regulon Jaccard, program activity in the held-out half, driver → regulator edges, and risk (ridge trained on FU-iCCA
+  patients of the kept half, tested on FU-iCCA patients of the held-out half). SLURM 15057–15067.
+  Expect lower high-confidence causal recovery by design: each half has about half the altered tumours, so few
+  features reach 25 altered.
 
 - **[2026-10-02] Step 07a/07b: signature library and class mapping (first pass, MSigDB + the HCC custom immune sets).**
   - `config/subtype_signatures.yaml` rewritten for ICC: library = cholangiocarcinoma, liver-cancer and pancreatic-cancer
