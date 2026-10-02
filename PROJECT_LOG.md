@@ -19,6 +19,27 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Decisions
 
+- **[2026-10-02] Discovery designs compared (user: "try 437 and 374 and test").** Configs `config/params_d374.yaml`,
+  `config/params_d437.yaml` (results in `results_d374/`, `results_d437/`); comparison `scripts/08d_compare_designs.py` →
+  `results/08_validation/design_comparison.tsv`. "437" is 433 in practice: 4 OEP002768 tumours with < 9,000 genes detected
+  were dropped. Technical anchor transferred by gene content (`config/technical_anchor_genes.txt`, the 315 run's module 0)
+  after the automatic rule picked an immune module in d374 (fixed before the compared runs).
+  | | d315 | d374 (+GSE179443) | d433 (+GSE179443 +OEP002768) |
+  |---|---|---|---|
+  | genes / regulons / regulators / programs | 13,782 / 3,572 / 398 / 164 | 13,504 / 3,451 / 376 / 158 | 11,501 / 2,833 / 314 / 166 |
+  | regulators shared with d315 | — | 90% | 76% |
+  | high-confidence flows (IDH1 / FGFR2 families) | 6,205 (80 / 68) | 5,832 (50 / 96) | 5,886 (17 / 78) |
+  | GSE244807 stratified HR/SD (p) | 1.32 (0.025) | **1.59 (1e-4)** | 1.53 (6e-4) |
+  | GSE244807 surgical C / HR/SD | 0.62 / 1.50 | 0.63 / 1.70 | 0.64 / 1.70 |
+  | GSE244807 biopsy HR/SD (p) | 1.14 (0.27) | 1.36 (0.012) | 1.29 (0.040) |
+  | OEP002768 C / HR/SD | 0.70 / 2.18 (held out) | 0.69 / 2.06 (held out) | 0.65 / 1.90 (in network) |
+  | TCGA / GSE107943 C | 0.61 / 0.68 | 0.60 / 0.67 | 0.62 / 0.69 |
+  - **Reading:** adding GSE179443 improves external validation in GSE244807 (both strata) at almost no gene cost and keeps
+    OEP002768 as an independent test. Adding OEP002768 on top costs 2,000 genes and 24% of the regulators, weakens the IDH1
+    and BAP1 causal signal, and does not improve any external test. **Recommendation: d374, OEP002768 held out.**
+  - Program-level correspondence between designs is low by gene sets (median best Jaccard 0.06) — consistent with the
+    split-half result that regulon membership is not reproducible; compare designs by regulators and activity, not genes.
+
 - **[2026-10-02] Two more cohorts assessed for model building (decision pending with the user).**
   - **OEP002768 (FU-CCA; Deng et al., Hepatology 2023):** user added `Supplementary_Table_1.xlsx`; sheets exported to
     `data/OEP002768/tables/`. 217 CCA patients, 114 iCCA; 84 iCCA tumours with RNA-seq, 102 with WES, OS for 113

@@ -120,6 +120,20 @@ def stage_ordinal(df, cohort):
         {"I": 1, "II": 2, "III": 3, "IV": 4}).astype(float)
 
 
+def _fit_high_low(d, r, clin, srv, cohort):
+    from lifelines import CoxPHFitter
+    if d["high"].nunique() == 2:
+        s = CoxPHFitter().fit(d, "duration", "observed").summary.loc["high"]
+        r.update(hr=s["exp(coef)"], hr_lo=s["exp(coef) lower 95%"], hr_hi=s["exp(coef) upper 95%"], hr_p=s["p"])
+        st = stage_ordinal(clin.reindex(srv.index), cohort)
+        da = d.assign(stage=st).dropna()
+        if da["stage"].nunique() > 1 and da["high"].nunique() == 2:
+            sa = CoxPHFitter().fit(da, "duration", "observed").summary
+            r.update(hr_stage_adj=sa.loc["high", "exp(coef)"], hr_stage_adj_lo=sa.loc["high", "exp(coef) lower 95%"],
+                     hr_stage_adj_hi=sa.loc["high", "exp(coef) upper 95%"], hr_stage_adj_p=sa.loc["high", "p"],
+                     n_stage_adj=len(da))
+
+
 def evaluate_external(clf, mtrx, guan, clin, cohort, tag, outdir, log):
     """MINER riskStratification + C-index + (stage-adjusted) Cox HR of predicted class."""
     from lifelines import CoxPHFitter
@@ -138,16 +152,10 @@ def evaluate_external(clf, mtrx, guan, clin, cohort, tag, outdir, log):
          "miner_integrated_auc": float(np.mean(aucs)), "miner_hr_statistic": float(miner_hr),
          "c_index": concordance_index(srv["duration"], -prob[srv.index], srv["observed"])}
     d = srv.assign(high=pd.Series(lbls, index=mtrx.columns)[srv.index].astype(int))
-    if d["high"].nunique() == 2:
-        s = CoxPHFitter().fit(d, "duration", "observed").summary.loc["high"]
-        r.update(hr=s["exp(coef)"], hr_lo=s["exp(coef) lower 95%"], hr_hi=s["exp(coef) upper 95%"], hr_p=s["p"])
-        st = stage_ordinal(clin.reindex(srv.index), cohort)
-        da = d.assign(stage=st).dropna()
-        if da["stage"].nunique() > 1 and da["high"].nunique() == 2:
-            sa = CoxPHFitter().fit(da, "duration", "observed").summary
-            r.update(hr_stage_adj=sa.loc["high", "exp(coef)"], hr_stage_adj_lo=sa.loc["high", "exp(coef) lower 95%"],
-                     hr_stage_adj_hi=sa.loc["high", "exp(coef) upper 95%"], hr_stage_adj_p=sa.loc["high", "p"],
-                     n_stage_adj=len(da))
+    try:
+        _fit_high_low(d, r, clin, srv, cohort)
+    except Exception as e:                      # small test cohorts: a predicted class with no events does not converge
+        log.warning("%s -> %s: Cox on the predicted class did not converge (%s); HR left empty", tag, cohort, type(e).__name__)
     log.info("%s -> %s: n=%d events=%d, C=%.3f, MINER iAUC=%.3f, HR high vs low %.2f (%.2f-%.2f) p=%.2g; "
              "stage-adjusted HR %.2f p=%.2g", tag, cohort, r["n"], r["events"], r["c_index"],
              r["miner_integrated_auc"], r.get("hr", np.nan), r.get("hr_lo", np.nan), r.get("hr_hi", np.nan),

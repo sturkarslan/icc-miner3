@@ -44,6 +44,15 @@ def main():
                       for k, v in mods.items()}).T
     out = q[["n_genes", "n_regulons", "best_marker_program", "best_marker_r", "top_genes"]].copy()
     out["r_genes_detected"] = E.apply(lambda v: np.corrcoef(v, nd)[0, 1], axis=1)
+    if T.get("anchor_module") is None and T.get("anchor_genes"):
+        # gene-based anchor transferred from the main design: the module sharing most genes with the anchor gene list
+        ag = {l.strip() for l in open(p(T["anchor_genes"])) if l.strip() and not l.startswith("#")}
+        sym = pd.read_csv(os.path.join(res, "01_harmonized", "genes.tsv"), sep="\t", index_col=0)["symbol"]
+        ov = pd.Series({int(k): len({sym.get(back.get(x, x), "") for x in v} & ag) / len(ag) for k, v in mods.items()})
+        T["anchor_module"] = int(ov.idxmax())
+        log.info("Anchor from %s (%d genes): module %d holds %.0f%% of them (%d genes, r %.2f with genes detected); top genes %s",
+                 T["anchor_genes"], len(ag), T["anchor_module"], 100 * ov.max(), out.loc[T["anchor_module"], "n_genes"],
+                 out.loc[T["anchor_module"], "r_genes_detected"], out.loc[T["anchor_module"], "top_genes"])
     if T.get("anchor_module") is None:
         # automatic anchor: among large modules (>= anchor_min_genes) without marker biology, the one that tracks
         # genes detected most closely. Check the logged top genes (expected: long nuclear-retained transcripts).

@@ -360,6 +360,7 @@ miner:
   random_state: 12
   technical:
     anchor_module: null
+    anchor_genes: config/technical_anchor_genes.txt
     reference_cohort: FU_iCCA
     min_r_anchor: 0.7
     max_marker_r: 0.5
