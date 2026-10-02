@@ -1,3 +1,4 @@
+# Design d433 (d374 + OEP002768 unique patients), tested 2026-10-02 and not adopted. Results in results_d437/.
 # Design d437: derived from config/params.yaml by adding GSE179443 and OEP002768 (unique patients) to discovery. Results in results_d437/.
 # Generated 2026-10-02; edit here for this design (comments of the main file are not carried over).
 paths:

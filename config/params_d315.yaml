@@ -1,17 +1,17 @@
+# Design d315 (FU-iCCA + TCGA-CHOL + GSE107943): the main configuration until 2026-10-02, kept for comparison. Results in results_d315/.
 # ICC (intrahepatic cholangiocarcinoma) MINER pipeline parameters. Paths are relative to the project
 # root (/proj/omics4tb2/sturkarslan/ICC). Same pipeline as the HCC project (hcc-miner3); sections are
 # added here as each step is adapted to ICC.
 
 paths:
   data: data
-  results: results
+  results: results_d315
 
 # ---------------------------------------------------------------- step 01
 cohorts:
-  # Discovery = FU-iCCA + TCGA-CHOL (intrahepatic) + GSE107943 + GSE179443, 374 tumours (design d374, user decision
-  # 2026-10-02 after comparing d315 / d374 / d433; PROJECT_LOG). Held out for validation: GSE244807 (strong within-cohort
-  # technical axis; largest independent survival cohort) and OEP002768 (independent RNA + WES + OS; 32 patients shared
-  # with FU-iCCA are excluded). Previous main design: config/params_d315.yaml.
+  # Discovery = FU-iCCA + TCGA-CHOL (intrahepatic) + GSE107943, 315 tumours (user decision 2026-10-02).
+  # GSE244807 is held out for validation (step 08): strong within-cohort technical axis, and it is the only
+  # large independent cohort with survival (PROJECT_LOG).
   FU_iCCA:
     # Dong et al., Cancer Cell 2022 (NODE OEP001105): paper supplementary tables exported to data/FU_iCCA/tables/
     expression: data/FU_iCCA/tables/mmc2_S1C_mRNA_expression.tsv   # log2(TPM + 1), gene symbols
@@ -42,19 +42,6 @@ cohorts:
     keep_filters:
       'ch:tissue': ['Tumor (Intrahepatic cholangiocarcinoma)']
     label_columns: {author_class: 'ch:class', pathologic_type: 'ch:pathologic type'}
-  GSE179443:
-    # Yonsei (PMID 35124821): 59 iCCA (51 LC4, 8 LC3) of 137 liver cancers. The file named raw counts holds
-    # log2(FPKM + 1) (Cufflinks, GENCODE v27; GEO processing notes); FPKM rescaled to TPM. No survival or genomics in GEO.
-    expression: data/GSE179443/suppl/GSE179443_Raw_gene_counts.txt.gz
-    format: fpkm_table
-    sep_regex: '\s+'
-    log2_pseudocount: 1
-    id_type: ensembl
-    sample_table: data/GSE179443/samples_geo.tsv
-    sample_id_column: title
-    keep_filters:
-      'ch:disease state': [ICC]
-    label_columns: {lc_subtype: 'ch:molecular subtype'}
 
 id_mapping:
   gencode_probemap: data/reference/gencode.v36.annotation.gtf.gene.probemap
@@ -162,7 +149,7 @@ genomics:
 
 # ---------------------------------------------------------------- step 04 (MINER3)
 miner:
-  matrix: combat           # 374-tumour network (design d374)
+  matrix: combat           # 315-tumour network. The FU-iCCA-only run (matrix "single", 255) is kept as a sensitivity run
   idmap: /users/sturkars/mambaforge/envs/miner3/lib/python3.11/site-packages/miner/data/identifier_mappings.txt
   tfs2genes: null
   min_genes: 6
@@ -173,10 +160,8 @@ miner:
   random_state: 12
   # Technical modules (step 04b_technical_modules.py): modules that follow the anchor module in the reference cohort
   # and have no marker biology. Module IDs are from THIS run (random_state 12); re-derive if MINER is rerun.
-  # anchor = the module holding most of the d315 anchor genes (long nuclear-retained transcripts; config/technical_anchor_genes.txt)
-  technical: {anchor_module: null, anchor_genes: config/technical_anchor_genes.txt, reference_cohort: FU_iCCA,
-              min_r_anchor: 0.7, max_marker_r: 0.5}
-  exclude_modules: []     # empty: step 04c uses module_qc/technical_modules.tsv from 04b_technical_modules.py
+  technical: {anchor_module: 0, reference_cohort: FU_iCCA, min_r_anchor: 0.7, max_marker_r: 0.5}
+  exclude_modules: [0, 13, 20, 23, 24, 25, 29, 37, 44, 45, 63, 66, 67, 76, 111, 112, 114, 125, 140, 148, 152, 162, 177, 186, 191, 195, 196, 222, 225, 228, 250, 251, 270, 282, 304, 309, 327, 329, 356, 361, 366, 368, 380, 389, 390, 402, 427, 433, 436, 440, 474, 476, 494, 496, 502, 512, 523, 529, 536, 540, 547, 548, 551, 564, 570, 574, 592, 598, 605, 615, 626, 635, 645, 681, 682, 690, 694, 695, 700, 705, 715, 716, 717, 721, 730, 737, 743, 746, 765, 766, 782, 791, 867, 876, 878]
   exclude_min_fraction: 0.5
 
 # ---------------------------------------------------------------- step 05 (causal inference)
