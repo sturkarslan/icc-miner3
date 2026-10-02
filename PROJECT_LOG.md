@@ -7,8 +7,14 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Open questions
 
-- **ICC classifier gene lists** (Sia 2013, Dong 2022 S1–S4, Beaufrère 2024, Job 2020) are to come from Claude Cloud; add
-  to `config/subtype_signatures_custom.tsv` and build `config/reference_panel.yaml` for ICC, then adapt 07c / 07d / 09.
+- **ICC classifiers are extracted** (see 2026-10-02 extraction entry). Still open: (1) the original Martin-Serrano Gut
+  online Table S5 to confirm the STIM gene-to-class blocks (taken from Lin 2026; put the file in
+  `data/papers/martin_serrano2023/manual/`); (2) run 07a / 07b on the server with the new classifiers and published
+  labels, then `config/reference_panel.yaml` for ICC and 07c / 07d / 09; (3) the Sia template transfers poorly to
+  RNA-seq (below): decide whether to keep it as an NTP classifier or only as a library set.
+- **GSE89749 survival**: Song 2022 Suppl Data 4 gives survival days and site (intrahepatic) for 115 GSE89749 samples
+  but no vital status; Jusakul 2017 (Cancer Discov) Table S1 should have both (aacrjournals.org not reachable from
+  Cloud). With status this would be a second external survival cohort.
 - **GC-rich chromosome arms look unreliable in the FU-iCCA copy-number table** (17p/q, 19p/q, 22q; see step 03b entry).
   Decide at step 05 whether to drop them or correct for a per-sample GC component.
 - NODE cohorts OEP002768 (validation) and OEP002560 (multi-region) are still not downloaded.
@@ -77,6 +83,68 @@ is never mixed into the HCC network. Newest entries first. Everything is written
     altered tumours, so this is a lower bound, but individual flows should not be over-read without replication.
   - **Risk generalises within FU-iCCA** when both the network and the model exclude the test half (C 0.71 / 0.76). This is
     same-cohort, same-centre performance; across cohorts it is lower (surgical GSE244807 0.62, TCGA 0.58, GSE107943 0.68).
+- **[2026-10-02] ICC classifier gene sets and published labels extracted (Claude Cloud, after the network was opened).**
+  `scripts/tools/fetch_signature_sources.py` now fetches from the PMC open-data S3 bucket (open-access supplements),
+  Elsevier's CDN (Sia, Dong, Chaisaingmongkol) and authors' repositories; PMC article pages answer scripts with a
+  CAPTCHA, so NIH author-manuscript supplements (Martin-Serrano Gut tables) are not reachable. Inventory:
+  `docs/signature_sources_inventory.md`. `scripts/tools/extract_icc_signatures.py` writes 56 sets (5,014 rows) to
+  `config/subtype_signatures_custom.tsv` and 3,272 per-sample calls to `config/icc_published_labels.tsv`.
+  - **Sia 2013** (Suppl Table 2): Proliferation 1,402 / Inflammation 163 genes (= the 1,565 in Lin's copy; the PDF has
+    Excel-mangled sep-02 … sep-11, mapped to SEPTn); survival (359 poor / 184 good) and recurrence (124 / 202)
+    signatures. **Check in Sia's own cohort (GSE32225, DASL, authors' labels, fetched from GEO in Cloud): NTP 93%
+    exact (ARI 0.72; 57 / 57 Inflammation, 81 / 92 Proliferation).** In FU-iCCA RNA-seq the two class scores
+    correlate r 0.78 and the calls do not agree with Lin's FU-iCCA Sia calls (ARI 0): the FFPE-array signature
+    transfers poorly, or Lin's calls differ in method. Treat Sia calls in RNA-seq with caution.
+  - **STIM (Martin-Serrano 2023)**: 500 genes from Lin 2026 Table S2A in five blocks of 100 (immune classical,
+    inflammatory stroma, hepatic stem-like, tumour classical, desert-like). Order confirmed: 69–100% of each block's
+    FU-iCCA genes peak in that class of Lin's FU-iCCA STIM calls. NTP on the published FU-iCCA mRNA reproduces those
+    calls: 87% exact, ARI 0.72.
+  - **Beaufrère STIM labels** for GSE244807 (246; hepatic stem-like 90, immune classical 57, inflammatory stroma 54,
+    tumour classical 34, desert-like 11 = paper Table S2) and TCGA-CHOL (29), from the authors' repository
+    (github.com/trislaz/ICCA_prediction, `csv_labels/`); GEO sample titles CK001… = their patient IDs. Their method:
+    gene-wise centring, class = highest mean of the class gene set.
+  - **Job 2020**: Table S1 = MCP-counter (8 populations used), Boers HSC quiescent / activated / myofibroblast and
+    functional sets; the 14 classification signatures are all there (410 genes = Lin's copy). Classes came from
+    clustering the 14 scores with no published centroids, so there is no NTP classifier; use the sets and the
+    published FU-iCCA I1–I4 calls (Lin 2026).
+  - **Dong 2022**: no subgroup gene list is published. Per-patient proteomic subgroups (Table S5E: S1 41, S2 60,
+    S3 46, S4 67 = paper) are in the labels file; mRNA templates (top 100 up per subgroup in the published FU-iCCA
+    mRNA) are ours and in-sample for FU-iCCA (NTP 79% exact in FU-iCCA, not an independent check). Lin's "Protein"
+    calls equal Dong's subgroups (Inflammatory = S1, Mesenchymal = S2, Metabolic = S3, Differentiated = S4).
+  - **Lin 2026 (Cell Rep Med)**: NTP template of five ITH-robust subgroups (SI, SII, SIII-1/2/3; 594 genes): 81% exact
+    vs Lin's FU-iCCA calls. Table S4D gives Lin's FU-iCCA calls for nine published classifications (Andersen, Oishi,
+    Sia, Dong RNA / protein, Nakamura, Lin J 2022 immune, Job, STIM): all in the labels file, so MINER states and
+    programs can be compared with published classes in our discovery cohort directly. Also subgroups for GSE89749
+    (81) and OEP002768 (84), and seven published iCCA prognostic signatures (ICC_PROGNOSTIC_*, unsigned).
+  - **Added**: Fan 2024 30-gene NTP classifier (C1 mesenchymal / immunosuppressive vs C2 metabolic; C2 genes are
+    mitochondrial MT- genes), CORE-37 genes, liver- / pancreas-specific contamination markers; Song 2022 large-duct
+    vs small-duct tumour-cell templates (top 100 each; S100P / REG4 / TFF vs SPP1 / CRP / VTN) and GSE89749 S100P /
+    SPP1 groups; Chaisaingmongkol 2017 ICC-C1 driver genes (51; no full C1 / C2 classifier is published).
+  - **Pipeline**: `subtype_signatures.yaml` classifiers sia2013, stim, dong2022, fan2024, duct, lin2026 (class names
+    equal the published label names); 07b adds `config/icc_published_labels.tsv` as `pub_<classifier>` sample labels
+    (FU-iCCA by patient ID, TCGA by patient barcode; `post.published_labels` in params), so `ntp_vs_labels.tsv`, state
+    enrichment and p4 include them (p4 only pairs each published call with its own classifier). Not run on the server yet.
+
+- **[2026-10-02] ICC classifier panel reviewed; sources registered (`config/signature_sources.yaml`).** (First pass:
+  the Cloud network blocked PMC / NCBI / publishers; opened by the user, extraction in the entry above.) New `scripts/tools/fetch_signature_sources.py` resolves
+  each paper (NCBI ID converter, title logged), downloads the supplements (Europe PMC zip → PMC page → Elsevier
+  mmc via Crossref PII) into `data/papers/<key>/`, and writes `docs/signature_sources_inventory.md` (sheets, first
+  rows, gene-symbol-like columns; FU-iCCA `manual/` tables included for the Dong subgroup labels).
+  - **"Beaufrère five classes" are the STIM classes of Martin-Serrano et al., Gut 2023** (immune classical, inflammatory
+    stroma; hepatic stem-like, tumour classical, desert-like). The gene lists come from Martin-Serrano; Beaufrère et al.
+    (JHEP Reports 2025, PMC12800354) assigned them to GSE244807 (hepatic stem-like 90 / 246), so their per-sample
+    labels are a check of our STIM calls in GSE244807, as Andersen was for GSE107943. The PMID 39242455 given for
+    GSE244807 in the cohort table was not confirmed.
+  - Panel (priority 1 = requested): Sia 2013 Proliferation / Inflammation (+ GSE32225 labels); STIM five classes;
+    Job 2020 I1–I4 (14 TME signatures); Dong 2022 S1–S4 (per-patient labels for FU-iCCA, our discovery cohort, so
+    compared directly; protein markers). Priority 2: Chaisaingmongkol 2017 TIGER-LC C1 / C2 (shared HCC / iCCA;
+    GSE76297 is on the server); Fan 2024 Nat Commun two CCA subtypes (30-gene classifier, CORE-37 prognostic);
+    Song 2022 large-duct (S100P) vs small-duct (SPP1), needed because our risk score follows that axis.
+    Priority 3: Lin 2026 Cell Rep Med LIHV 1,341-gene set / five subtypes (multi-region).
+    Kept from MSigDB: Andersen 2012, Oishi 2012. Not used as expression templates: Nakamura 2015, Jusakul 2017
+    (genomic / methylation clusters), Farshidfar 2017 (IDH is a driver feature), Montal 2020 (extrahepatic).
+  - Fallback if a supplement has no gene list: derive class templates from the authors' labels (GSE32225 for Sia,
+    FU-iCCA for Dong, GSE244807 for STIM) and say so in the set's reference column.
 
 - **[2026-10-02] GitHub: `sturkarslan/icc-miner3` created by the user; `main` pushed.** Claude Cloud will supply the ICC
   classifier / subtype gene lists (Sia 2013, Dong 2022, Beaufrère 2024, Job 2020 …); 07c, 07d, the head-to-head and

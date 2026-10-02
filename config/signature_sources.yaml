@@ -1,0 +1,118 @@
+# Published iCCA classifiers and signatures whose gene lists (or per-sample class labels) must come from the papers'
+# supplementary files. scripts/tools/fetch_signature_sources.py downloads the supplements into data/papers/<key>/ and
+# writes docs/signature_sources_inventory.md (sheet names, headers, first rows), from which one extraction script per
+# paper is written (scripts/tools/extract_<key>_signatures.py, as for HCC). Gene lists are never typed in by hand.
+#
+# Identifiers marked "search" were confirmed by a web search on 2026-10-02 (PubMed / PMC / publisher pages);
+# "memory" ones are not verified. The fetch script resolves every entry through NCBI and logs the title, so a
+# wrong identifier shows up as a wrong title.
+#
+# use:
+#   signature  gene lists -> config/subtype_signatures_custom.tsv -> NTP classifier / library set (07a, 07b)
+#   labels     per-sample class labels for a cohort we have -> check of our NTP calls (as Andersen vs GSE107943)
+# priority: 1 = requested / core iCCA classifier, 2 = recommended addition, 3 = optional
+
+papers:
+  sia2013:
+    citation: "Sia D et al. Integrative molecular analysis of intrahepatic cholangiocarcinoma reveals 2 classes that have different outcomes. Gastroenterology 2013;144:829-840"
+    doi: 10.1053/j.gastro.2013.01.001          # memory
+    priority: 1
+    use: [signature, labels]
+    want: >-
+      Proliferation / Inflammation class signatures (NTP templates) and the poor-prognosis signature.
+      Labels: GSE32225 sample characteristics already carry the class (Proliferation 92 / Inflammation 57).
+    fallback: "if the supplement has no gene list, derive the class templates from the GSE32225 labels (as the authors did)"
+
+  martin_serrano2023:
+    citation: "Martin-Serrano MA et al. Novel microenvironment-based classification of intrahepatic cholangiocarcinoma with therapeutic implications. Gut 2023;72:736-748"
+    doi: 10.1136/gutjnl-2021-326514            # search
+    pmid: "35584893"                           # search
+    pmcid: PMC10388405                         # search
+    priority: 1
+    use: [signature]
+    want: >-
+      STIM five classes: immune classical, inflammatory stroma (inflamed); hepatic stem-like, tumour classical,
+      desert-like (non-inflamed). Class signatures / classifier genes and the TME deconvolution signatures used.
+    note: >-
+      This is the 'Beaufrere five classes': Beaufrere et al. assigned these STIM classes to GSE244807. The Gut
+      supplement (online Table S5) is on gut.bmj.com (not reachable from the Cloud environment) and on PMC (author
+      manuscript, behind a CAPTCHA). The 500 genes are taken from Lin 2026 Table S2A instead (five blocks of 100,
+      order checked against expression); replace with Table S5 when it is placed in data/papers/martin_serrano2023/manual/.
+
+  beaufrere2025:
+    citation: "Beaufrere A et al. Self-supervised learning to predict intrahepatic cholangiocarcinoma transcriptomic classes on routine histology. JHEP Reports 2025 (bioRxiv 2024.01.15.575652)"
+    pmid: "41541502"                           # search
+    pmcid: PMC12800354                         # search
+    priority: 1
+    use: [labels]
+    extra_urls:                                # authors' code (github.com/trislaz/ICCA_prediction): per-slide labels
+      - https://raw.githubusercontent.com/trislaz/ICCA_prediction/main/csv_labels/heptastem_testsplit.csv
+      - https://raw.githubusercontent.com/trislaz/ICCA_prediction/main/csv_labels/TCGA_chol_final_transcripto_hemstem.csv
+    want: >-
+      Per-sample STIM class of the 246 GSE244807 samples (hepatic stem-like 90/246 in the discovery set), and how
+      the classes were assigned. Our GSE244807 STIM calls are checked against these labels.
+
+  job2020:
+    citation: "Job S et al. Identification of four immune subtypes characterized by distinct composition and functions of tumor microenvironment in intrahepatic cholangiocarcinoma. Hepatology 2020;72:965-981"
+    doi: 10.1002/hep.31092                     # memory
+    pmid: "31875970"                           # search
+    pmcid: PMC7589418                          # search
+    priority: 1
+    use: [signature, labels]
+    want: >-
+      The 14 TME signatures and 3 functional indicators (liver activity, inflammation, immune resistance), and the
+      classifier (centroids or predictor genes) for I1 immune desert, I2 immunogenic, I3 myeloid, I4 mesenchymal.
+      Per-sample labels if the public cohorts used include ours.
+
+  dong2022:
+    citation: "Dong L et al. Proteogenomic characterization identifies clinically relevant subgroups of intrahepatic cholangiocarcinoma. Cancer Cell 2022;40:70-87"
+    doi: 10.1016/j.ccell.2021.12.006           # cohorts.yaml
+    priority: 1
+    use: [labels, signature]
+    also_inventory: [data/FU_iCCA/manual]
+    want: >-
+      Proteomic subgroups S1 inflammation, S2 interstitial, S3 metabolism, S4 differentiation: per-patient labels
+      (FU-iCCA is our discovery cohort, so the labels can be compared with our programs and states directly) and
+      the subgroup-specific protein biomarkers. mmc2 / mmc3 / mmc5 are already in data/FU_iCCA/manual/; check
+      there first, the fetch gets the remaining mmc files.
+
+  chaisaingmongkol2017:
+    citation: "Chaisaingmongkol J et al. Common molecular subtypes among Asian hepatocellular carcinoma and cholangiocarcinoma. Cancer Cell 2017;32:57-70"
+    doi: 10.1016/j.ccell.2017.05.009           # memory
+    pmid: "28648284"                           # search
+    pmcid: PMC5524207                          # search
+    priority: 2
+    use: [signature, labels]
+    want: "TIGER-LC C1 (poor; PLK1 / ECT2 mitotic) vs C2 (T-cell infiltration, bile acid) signature; GSE76297 labels."
+
+  fan2024:
+    citation: "Fan Z, Zou X et al. A transcriptome based molecular classification scheme for cholangiocarcinoma and subtype-derived prognostic biomarker. Nat Commun 2024;15"
+    doi: 10.1038/s41467-024-44748-8            # search
+    pmcid: PMC10784309                         # search
+    priority: 2
+    use: [signature]
+    want: "Two universal CCA subtypes: the 30-gene subtype classifier and the CORE-37 prognostic biomarker (438 CCA)."
+
+  song2022:
+    citation: "Song G et al. Single-cell transcriptomic analysis suggests two molecularly distinct subtypes of intrahepatic cholangiocarcinoma. Nat Commun 2022;13:1642"
+    doi: 10.1038/s41467-022-29164-0            # search
+    pmcid: PMC8960779                          # search
+    priority: 2
+    use: [signature]
+    want: >-
+      Large-duct (S100P+ SPP1-, perihilar) vs small-duct (S100P- SPP1+, peripheral) tumour-cell signatures.
+      Our risk score follows this axis (step 07b), so an explicit large/small-duct template is needed.
+
+  lin2026:
+    citation: "Lin Y, Peng L, Zhao H et al. Robust transcriptomic hallmarks targeting intratumor heterogeneity in intrahepatic cholangiocarcinoma. Cell Rep Med 2026"
+    pmid: "41916296"                           # search
+    priority: 3
+    use: [signature]
+    want: "LIHV 1,341-gene set (low intra-, high inter-tumour variability) and its five subtypes; multi-region design."
+
+# Considered and not fetched:
+#   Andersen 2012 (class 1 / 2) and Oishi 2012 (stem-like): already in MSigDB C2 (07a library).
+#   Nakamura 2015 Nat Genet and Jusakul 2017 Cancer Discov: clusters defined mainly by mutations, copy number and
+#     methylation; use as genomic annotations, not expression templates.
+#   Farshidfar 2017 (TCGA-CHOL IDH cluster): IDH status is already a driver feature (03b); 30 TCGA tumours.
+#   Montal 2020 J Hepatol: extrahepatic CCA.
