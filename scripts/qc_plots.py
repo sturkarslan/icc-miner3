@@ -723,7 +723,7 @@ def _heat(ax, M, cmap, vmin, vmax, fmt=None, marks=None):
     return im
 
 
-def subtype_report(outdir, enr, ari, pt, cor, calls, samples, label_cols, states):
+def subtype_report(outdir, enr, ari, pt, cor, calls, samples, label_cols, states, pub_ntp=None):
     qc = os.path.join(outdir, "qc")
     written = []
     st_order = sorted(states, key=int)
@@ -747,7 +747,7 @@ def subtype_report(outdir, enr, ari, pt, cor, calls, samples, label_cols, states
     for ax in list(axes.flat)[len(anns):]:
         ax.set_visible(False)
     fig.colorbar(im, ax=axes.ravel().tolist(), shrink=0.5, label="fraction of state's samples  (* enriched, FDR < 0.05)")
-    fig.suptitle("MINER states vs published subtypes (NTP calls), LICA-FR labels and cohort", x=0.01, ha="left",
+    fig.suptitle("MINER states vs published subtypes (NTP calls), sample labels and cohort", x=0.01, ha="left",
                  fontweight="bold", color=INK, fontsize=10)
     _save(fig, qc, "p1_states_vs_subtypes.png", written)
 
@@ -785,9 +785,11 @@ def subtype_report(outdir, enr, ari, pt, cor, calls, samples, label_cols, states
         ax.set_title("Program activity vs signature score")
         _save(fig, qc, "p3_program_signature_correlation.png", written)
 
-    # ---- p4: NTP calls vs LICA-FR labels
+    # ---- p4: NTP calls vs sample labels
+    pub_ntp = pub_ntp or {}                    # published-call columns are plotted only against their own classifier
     pairs = [(cl, lab) for cl in calls for lab in label_cols
-             if samples[lab].notna().sum() >= 10 and samples[lab].nunique() >= 2]
+             if samples[lab].notna().sum() >= 10 and samples[lab].nunique() >= 2
+             and (not lab.startswith("pub_") or pub_ntp.get(lab) == cl)]
     if pairs:
         ncol = min(4, len(pairs))
         nrow = int(np.ceil(len(pairs) / ncol))
@@ -804,7 +806,7 @@ def subtype_report(outdir, enr, ari, pt, cor, calls, samples, label_cols, states
         for ax in list(axes.flat)[len(pairs):]:
             ax.set_visible(False)
         fig.colorbar(im, ax=axes.ravel().tolist(), shrink=0.5, label="fraction of label group")
-        fig.suptitle("NTP calls vs LICA-FR author labels (rows sum to 1)", x=0.01, ha="left",
+        fig.suptitle("NTP calls vs author / published labels (rows sum to 1)", x=0.01, ha="left",
                      fontweight="bold", color=INK, fontsize=10)
         _save(fig, qc, "p4_ntp_vs_labels.png", written)
     return written

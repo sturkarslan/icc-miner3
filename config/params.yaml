@@ -227,6 +227,19 @@ post:
   signatures_config: config/subtype_signatures.yaml
   subtypes_dir: subtypes_filtered
   min_set_genes: 5
+  # Published per-sample calls (scripts/tools/extract_icc_signatures.py): added to the sample annotations as
+  # pub_<classifier> columns, so NTP calls and MINER states are compared with them (ARI, enrichment).
+  published_labels: config/icc_published_labels.tsv
+  published_label_match:          # label-table cohort -> our cohort and how its sample ID maps to ours
+    FU_iCCA: {cohort: FU_iCCA, prefix: FU}          # FU-iCCA patient 111 -> FU111
+    TCGA_CHOL: {cohort: TCGA, patient_chars: 12}    # matched on the TCGA patient barcode
+  published_label_ntp:            # pub_<label> -> NTP classifier it is plotted against (p4)
+    andersen2012: andersen
+    oishi2012: oishi
+    sia2013: sia2013
+    stim: stim
+    dong2022_proteomic: dong2022
+    lin2026: lin2026
   ntp:
     permutations: 1000
     fdr: 0.05

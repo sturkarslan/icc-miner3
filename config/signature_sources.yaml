@@ -33,7 +33,11 @@ papers:
     want: >-
       STIM five classes: immune classical, inflammatory stroma (inflamed); hepatic stem-like, tumour classical,
       desert-like (non-inflamed). Class signatures / classifier genes and the TME deconvolution signatures used.
-    note: "This is the 'Beaufrere five classes': Beaufrere et al. assigned these STIM classes to GSE244807."
+    note: >-
+      This is the 'Beaufrere five classes': Beaufrere et al. assigned these STIM classes to GSE244807. The Gut
+      supplement (online Table S5) is on gut.bmj.com (not reachable from the Cloud environment) and on PMC (author
+      manuscript, behind a CAPTCHA). The 500 genes are taken from Lin 2026 Table S2A instead (five blocks of 100,
+      order checked against expression); replace with Table S5 when it is placed in data/papers/martin_serrano2023/manual/.
 
   beaufrere2025:
     citation: "Beaufrere A et al. Self-supervised learning to predict intrahepatic cholangiocarcinoma transcriptomic classes on routine histology. JHEP Reports 2025 (bioRxiv 2024.01.15.575652)"
@@ -41,6 +45,9 @@ papers:
     pmcid: PMC12800354                         # search
     priority: 1
     use: [labels]
+    extra_urls:                                # authors' code (github.com/trislaz/ICCA_prediction): per-slide labels
+      - https://raw.githubusercontent.com/trislaz/ICCA_prediction/main/csv_labels/heptastem_testsplit.csv
+      - https://raw.githubusercontent.com/trislaz/ICCA_prediction/main/csv_labels/TCGA_chol_final_transcripto_hemstem.csv
     want: >-
       Per-sample STIM class of the 246 GSE244807 samples (hepatic stem-like 90/246 in the discovery set), and how
       the classes were assigned. Our GSE244807 STIM calls are checked against these labels.

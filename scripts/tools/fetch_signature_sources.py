@@ -9,11 +9,13 @@ Per paper:
   1. identifiers: NCBI ID converter (DOI / PMID -> PMCID, PMID, DOI); title, journal and year from Europe PMC are
      logged so a wrong identifier is visible.
   2. supplements, first route that gives files:
-       a. Europe PMC supplementaryFiles (zip of every supplementary file of a PMC article)
-       b. links to /bin/ files on the PMC article page
-       c. Elsevier (DOI 10.1016/...): PII from Crossref, then ars.els-cdn.com ...-mmc<N>.<ext>
+       a. PMC Article Datasets on AWS (pmc-oa-opendata S3 bucket): supplements of open-access articles
+       b. Elsevier (DOI 10.1016/, 10.1053/): PII from Crossref, then ars.els-cdn.com ...-mmc<N>.<ext>
+       c. links to /bin/ files on the PMC article page (PMC now answers scripts with a proof-of-work page, so
+          this mostly fails; author-manuscript supplements then go to manual/ by hand)
      Files land in data/papers/<key>/supp/. Anything placed by hand in data/papers/<key>/manual/ is inventoried too,
      as are the folders listed under also_inventory (e.g. the FU-iCCA tables already on the server).
+     Files listed under extra_urls (e.g. label tables in the authors' code repository) are downloaded too.
   3. inventory: every spreadsheet sheet (size, first rows, columns that look like gene symbols), text tables,
      Word tables and PDF pages that mention tables -> docs/signature_sources_inventory.md (small, committed: it
      describes published supplements, not project data) and data/papers/fetch.log.
@@ -22,7 +24,6 @@ Needs internet access (login node). pdfplumber is optional (PDF inventory); open
 """
 
 import argparse
-import io
 import json
 import os
 import re
@@ -42,6 +43,7 @@ from hcc_common import p, setup_logging  # noqa: E402
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) icc-miner3-fetch/1.0"}
 IDCONV = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
 EPMC = "https://www.ebi.ac.uk/europepmc/webservices/rest"
+PMC_S3 = "https://pmc-oa-opendata.s3.amazonaws.com"
 ELS_EXT = ("xlsx", "xls", "pdf", "docx", "doc", "zip", "csv", "txt")
 GENE_RE = re.compile(r"^[A-Z][A-Z0-9]{1,7}(-[A-Z0-9]{1,4})?$|^C\d{1,2}orf\d{1,3}$")
 
@@ -106,20 +108,27 @@ def resolve(spec):
 
 
 # ---------------------------------------------------------------- supplementary routes
-def route_epmc_zip(ids, out):
+def is_html(d):
+    return d[:600].lstrip().lower().startswith((b"<!doctype html", b"<html", b"<?xml"))
+
+
+def route_pmc_s3(ids, out):
+    """PMC Article Datasets on AWS (open access and author manuscripts): every non-figure file of the record."""
     if not ids.get("pmcid"):
         return 0
-    b, ctype = fetch_bytes(f"{EPMC}/{ids['pmcid']}/supplementaryFiles")
-    if not b or not b.startswith(b"PK"):
-        log.info("  Europe PMC supplementaryFiles: none (%s)", ctype)
-        return 0
+    b, _ = fetch_bytes(f"{PMC_S3}/?list-type=2&prefix={ids['pmcid']}.&max-keys=1000")
+    keys = re.findall(r"<Key>([^<]+)</Key>", (b or b"").decode())
     n = 0
-    with zipfile.ZipFile(io.BytesIO(b)) as z:
-        for name in z.namelist():
-            if name.endswith("/"):
-                continue
-            save(os.path.join(out, os.path.basename(name)), z.read(name))
+    for k in keys:
+        name = os.path.basename(k)
+        if name.startswith(ids["pmcid"] + ".") or name.lower().endswith((".jpg", ".gif", ".png", ".tif")):
+            continue                                    # article xml / txt / pdf / json and figures
+        d, _ = fetch_bytes(f"{PMC_S3}/{k}")
+        if d and not is_html(d):
+            save(os.path.join(out, name), d)
             n += 1
+    if keys and not n:
+        log.info("  PMC S3: record has no supplementary files (author manuscript: text only)")
     return n
 
 
@@ -136,7 +145,7 @@ def route_pmc_page(ids, out):
         for h in sorted(hrefs):
             url = urllib.parse.urljoin(base, h)
             d, _ = fetch_bytes(url)
-            if d:
+            if d and not is_html(d):                    # PMC answers bots with a proof-of-work HTML page
                 save(os.path.join(out, os.path.basename(urllib.parse.urlparse(url).path)), d)
                 n += 1
         if n:
@@ -146,7 +155,7 @@ def route_pmc_page(ids, out):
 
 def route_elsevier(ids, out, max_mmc):
     doi = ids.get("doi", "")
-    if not doi.startswith("10.1016/"):
+    if not doi.startswith(("10.1016/", "10.1053/")):    # Elsevier (Cell Press, Gastroenterology, ...)
         return 0
     j = fetch_json(f"https://api.crossref.org/works/{urllib.parse.quote(doi)}")
     alt = ((j or {}).get("message") or {}).get("alternative-id", [])
@@ -160,7 +169,7 @@ def route_elsevier(ids, out, max_mmc):
         for ext in ELS_EXT:
             url = f"https://ars.els-cdn.com/content/image/1-s2.0-{pii}-mmc{k}.{ext}"
             d, _ = fetch_bytes(url, retries=1)
-            if d and not d[:200].lstrip().lower().startswith(b"<!doctype html"):
+            if d and not is_html(d):
                 save(os.path.join(out, f"mmc{k}.{ext}"), d)
                 n += 1
                 break
@@ -308,15 +317,19 @@ def main():
         n, how = 0, "inventory-only"
         if not a.inventory_only:
             supp = os.path.join(folder, "supp")
-            for how, fn in (("europepmc_zip", lambda: route_epmc_zip(ids, supp)),
-                            ("pmc_page", lambda: route_pmc_page(ids, supp)),
-                            ("elsevier_mmc", lambda: route_elsevier(ids, supp, a.max_mmc))):
+            for how, fn in (("pmc_s3", lambda: route_pmc_s3(ids, supp)),
+                            ("elsevier_mmc", lambda: route_elsevier(ids, supp, a.max_mmc)),
+                            ("pmc_page", lambda: route_pmc_page(ids, supp))):
                 n = fn()
                 if n:
                     break
             else:
                 how = "none"
             log.info("  %d files via %s", n, how)
+            for url in spec.get("extra_urls", []):        # files outside the journal supplement (authors' repository)
+                d, _ = fetch_bytes(url)
+                if d and not is_html(d):
+                    save(os.path.join(supp, os.path.basename(urllib.parse.urlparse(url).path)), d)
         summary.append(f"| {key} | {spec.get('priority', '')} | {ids.get('pmcid', '')} | {n} | {how} |")
         doc += inventory(key, spec, ids, folder, a.rows)
     doc[head:head] = ["| paper | priority | PMCID | files fetched | route |", "|---|---|---|---|---|"] + summary + [""]

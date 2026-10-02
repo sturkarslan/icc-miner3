@@ -1,11 +1,8 @@
 # Signatures for mapping ICC MINER states and programs (steps 07a/07b). Gene lists are never typed in here: they
-# come from MSigDB GMT files or config/subtype_signatures_custom.tsv (supplementary tables; copied from the HCC
-# project). ICC-specific classifiers still missing because their gene lists are not on the server:
-# Sia 2013 proliferation / inflammation classes, Dong 2022 S1-S4 proteomic subgroups, the five STIM classes
-# (Martin-Serrano, Gut 2023; the "Beaufrere five classes", which Beaufrere et al. assigned to GSE244807),
-# Job 2020 tumour-microenvironment classes; recommended additions Chaisaingmongkol 2017 C1/C2, Fan 2024 30-gene
-# CCA classifier, Song 2022 large- / small-duct. Sources: config/signature_sources.yaml, fetched and inventoried by
-# scripts/tools/fetch_signature_sources.py; one extract_<paper>_signatures.py per paper then fills the custom TSV.
+# come from MSigDB GMT files or config/subtype_signatures_custom.tsv. The iCCA sets (SIA2013_, MARTINSERRANO2023_,
+# JOB2020_, DONG2022_, CHAISAINGMONGKOL2017_, FAN2024_, SONG2022_, LIN2026_, ICC_PROGNOSTIC_) are written by
+# scripts/tools/extract_icc_signatures.py from the supplements fetched by scripts/tools/fetch_signature_sources.py
+# (registry config/signature_sources.yaml). Published per-sample calls: config/icc_published_labels.tsv.
 
 msigdb:
   release: 2024.1.Hs
@@ -33,6 +30,36 @@ classifiers:
   oishi:                        # Oishi et al., Hepatology 2012: stem-cell-like cholangiocarcinoma
     stem_like: {up: ["^OISHI_CHOLANGIOMA_STEM_CELL_LIKE_UP$"], dn: ["^OISHI_CHOLANGIOMA_STEM_CELL_LIKE_DN$"]}
     mature: {up: ["^OISHI_CHOLANGIOMA_STEM_CELL_LIKE_DN$"], dn: ["^OISHI_CHOLANGIOMA_STEM_CELL_LIKE_UP$"]}
+  sia2013:                      # Sia et al., Gastroenterology 2013 (GSE32225): Proliferation (poor) / Inflammation classes
+    Proliferation: {up: ["^custom:SIA2013_PROLIFERATION$"], dn: ["^custom:SIA2013_INFLAMMATION$"]}
+    Inflammation: {up: ["^custom:SIA2013_INFLAMMATION$"], dn: ["^custom:SIA2013_PROLIFERATION$"]}
+  stim:                         # Martin-Serrano et al., Gut 2023 STIM classes (top 100 genes per class, NTP as published);
+                                # Beaufrere et al. assigned the same classes to GSE244807 and TCGA-CHOL
+    IMMUNE_CLASSICAL: {up: ["^custom:MARTINSERRANO2023_IMMUNE_CLASSICAL$"]}
+    INFLAMMATORY_STROMA: {up: ["^custom:MARTINSERRANO2023_INFLAMMATORY_STROMA$"]}
+    HEPATIC_STEM_LIKE: {up: ["^custom:MARTINSERRANO2023_HEPATIC_STEM_LIKE$"]}
+    TUMOUR_CLASSICAL: {up: ["^custom:MARTINSERRANO2023_TUMOUR_CLASSICAL$"]}
+    DESERT_LIKE: {up: ["^custom:MARTINSERRANO2023_DESERT_LIKE$"]}
+  dong2022:                     # Dong et al., Cancer Cell 2022 proteomic subgroups S1-S4 (FU-iCCA); mRNA templates derived
+                                # from the published labels (extract_icc_signatures.py), so FU-iCCA calls are not independent
+    S1: {up: ["^custom:DONG2022_S1_INFLAMMATION$"]}
+    S2: {up: ["^custom:DONG2022_S2_INTERSTITIAL$"]}
+    S3: {up: ["^custom:DONG2022_S3_METABOLISM$"]}
+    S4: {up: ["^custom:DONG2022_S4_DIFFERENTIATION$"]}
+  fan2024:                      # Fan et al., Nat Commun 2024: 30-gene NTP classifier of two pan-CCA subtypes (C1 poor)
+    C1_mesenchymal: {up: ["^custom:FAN2024_C1_MESENCHYMAL$"], dn: ["^custom:FAN2024_C2_METABOLIC$"]}
+    C2_metabolic: {up: ["^custom:FAN2024_C2_METABOLIC$"], dn: ["^custom:FAN2024_C1_MESENCHYMAL$"]}
+  duct:                         # Song et al., Nat Commun 2022: large-duct (S100P+SPP1-) vs small-duct (S100P-SPP1+) tumour cells
+    large_duct: {up: ["^custom:SONG2022_LARGE_DUCT$"], dn: ["^custom:SONG2022_SMALL_DUCT$"]}
+    small_duct: {up: ["^custom:SONG2022_SMALL_DUCT$"], dn: ["^custom:SONG2022_LARGE_DUCT$"]}
+  lin2026:                      # Lin et al., Cell Rep Med 2026: five subgroups from ITH-robust genes (NTP template, Table S5C)
+    SI: {up: ["^custom:LIN2026_SI$"]}
+    SII: {up: ["^custom:LIN2026_SII$"]}
+    SIII-1: {up: ["^custom:LIN2026_SIII_1$"]}
+    SIII-2: {up: ["^custom:LIN2026_SIII_2$"]}
+    SIII-3: {up: ["^custom:LIN2026_SIII_3$"]}
+  # Job 2020 immune subtypes (I1-I4) come from clustering 14 TME signature scores (JOB2020_* sets); no published
+  # centroids, so no NTP classifier: compare with the published FU-iCCA calls (config/icc_published_labels.tsv).
   inflamed:                     # Montironi 2023 20-gene Inflamed signature (HCC-derived, generic T-cell inflammation)
     inflamed: {up: ["^custom:MONTIRONI2023_INFLAMED$"]}
     non_inflamed: {dn: ["^custom:MONTIRONI2023_INFLAMED$"]}

@@ -4,8 +4,8 @@
 1. Sample calls: Nearest Template Prediction (Hoshida 2010) for each classifier in
    results/07_post/signatures/classifiers.json. Cosine similarity of each sample (template genes,
    z-scored) to each class template (+1 up, -1 dn); p-value from permuting gene labels; BH FDR over
-   samples; FDR >= post.ntp.fdr -> "unassigned". Calls are checked against the LICA-FR labels.
-2. States (sample groups): contingency with every classifier call, LICA-FR label and cohort;
+   samples; FDR >= post.ntp.fdr -> "unassigned". Calls are checked against author labels in samples.tsv and the published calls (post.published_labels).
+2. States (sample groups): contingency with every classifier call, sample label (incl. published calls) and cohort;
    one-sided Fisher enrichment per state x level (BH within annotation); adjusted Rand index.
 3. Programs and regulons (gene sets): hypergeometric overlap with every library signature
    (background = genes in MINER coexpression modules); BH over all tests.
@@ -152,6 +152,24 @@ def main():
     genes = pd.read_csv(os.path.join(res, "01_harmonized", "genes.tsv"), sep="\t", index_col="ensembl")
     sym = genes["symbol"].fillna("")
     label_cols = [c for c in samples.columns if c not in ("cohort", "patient")]
+    pub_path = p(Q["published_labels"]) if Q.get("published_labels") else None
+    if pub_path and os.path.exists(pub_path):     # published per-sample calls -> extra pub_<classifier> label columns
+        pub = pd.read_csv(pub_path, sep="\t", dtype=str)
+        for coh, m in (Q.get("published_label_match") or {}).items():
+            ours = samples[samples["cohort"] == m["cohort"]]
+            lab = pub[pub["cohort"] == coh]
+            if m.get("patient_chars"):
+                n = int(m["patient_chars"])
+                key = pd.Series(ours.index, index=ours["patient"].astype(str).str[:n])
+                ids = lab["sample"].str[:n]
+            else:
+                key = pd.Series(ours.index, index=ours.index)
+                ids = m.get("prefix", "") + lab["sample"]
+            lab = lab.assign(ours=ids.map(key[~key.index.duplicated()])).dropna(subset=["ours"])
+            for cl, g in lab.groupby("classifier"):
+                samples.loc[g["ours"].values, f"pub_{cl}"] = g["class"].values
+            log.info("published labels %s -> %s: %d samples matched", coh, m["cohort"], lab["ours"].nunique())
+        label_cols += [c for c in samples.columns if c.startswith("pub_")]
     back = miner_id_backmap(p(P["miner"]["idmap"]), z.index)
     fix = lambda gs: {back.get(g, g) for g in gs}  # noqa: E731
 
@@ -205,7 +223,7 @@ def main():
     val = pd.DataFrame(val_rows)
     val.to_csv(os.path.join(outdir, "ntp_vs_labels.tsv"), sep="\t", index=False, float_format="%.3f")
     if len(val):
-        log.info("NTP calls vs LICA-FR labels:\n%s", val.to_string(index=False, float_format=lambda v: f"{v:.2f}"))
+        log.info("NTP calls vs sample labels (authors' and published calls):\n%s", val.to_string(index=False, float_format=lambda v: f"{v:.2f}"))
 
     # ---- 2. states
     states = json.load(open(os.path.join(mdir, sub, "transcriptional_states.json")))
@@ -283,7 +301,8 @@ def main():
              np.median(corr(act, score).values), np.median(cor.values), cor.abs().max(1).median())
 
     import qc_plots
-    written = qc_plots.subtype_report(outdir, enr, ari, pt, cor, calls, samples, label_cols, states)
+    pub_ntp = {f"pub_{k}": v for k, v in (Q.get("published_label_ntp") or {}).items()}
+    written = qc_plots.subtype_report(outdir, enr, ari, pt, cor, calls, samples, label_cols, states, pub_ntp)
     log.info("QC figures: %s", ", ".join(written))
 
 

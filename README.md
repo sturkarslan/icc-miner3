@@ -5,7 +5,9 @@ replicating the HCC pipeline (`sturkarslan/hcc-miner3`). Data and results never 
 
 - `config/cohorts.yaml` — cohort registry; `scripts/tools/fetch_icca_cohorts.py` downloads and inventories them.
 - `config/signature_sources.yaml` — published iCCA classifier papers; `scripts/tools/fetch_signature_sources.py` downloads
-  their supplements and writes `docs/signature_sources_inventory.md` for the gene-list extraction scripts.
+  their supplements and writes `docs/signature_sources_inventory.md`; `scripts/tools/extract_icc_signatures.py` writes
+  the iCCA gene sets to `config/subtype_signatures_custom.tsv` and published per-sample calls to
+  `config/icc_published_labels.tsv` (used by step 07b).
 - `config/params.yaml` — pipeline parameters (sections are added as each step is adapted to ICC).
 - `scripts/01_…` to `09_…` — pipeline steps; SLURM wrappers in `scripts/slurm/` (submit from the project root).
 - `PROJECT_LOG.md` — decisions, issues and open questions.
