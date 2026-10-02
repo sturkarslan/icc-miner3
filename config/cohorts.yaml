@@ -119,3 +119,10 @@ cohorts:
     role: validation_candidate
     expected_n: "~91 Thai iCCA + non-tumour (Chaisaingmongkol et al., Cancer Cell 2017), Affymetrix HTA"
     notes: "Check survival in sample characteristics."
+
+  GSE179443:
+    source: geo
+    accession: GSE179443
+    role: discovery_candidate
+    expected_n: "~59 iCCA (user, 2026-10-02); check sample characteristics"
+    notes: "Candidate for model building; check expression format, tumour-only, survival."

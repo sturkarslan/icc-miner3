@@ -19,6 +19,25 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Decisions
 
+- **[2026-10-02] Two more cohorts assessed for model building (decision pending with the user).**
+  - **OEP002768 (FU-CCA; Deng et al., Hepatology 2023):** user added `Supplementary_Table_1.xlsx`; sheets exported to
+    `data/OEP002768/tables/`. 217 CCA patients, 114 iCCA; 84 iCCA tumours with RNA-seq, 102 with WES, OS for 113
+    (63 deaths), small / large duct labels, proteome.
+    - **Patient overlap with FU-iCCA (same hospital): 32 OEP iCCA patients are also in the Dong cohort**, matched on sex,
+      age ± 1 and ≥ 3 of 5 identical pre-operative values (CA19-9, ALT, γ-GT, bilirubin, CEA); about 0.5 matches expected
+      by chance. List in `config/oep002768_fu_icca_overlap.tsv`. 21 of them have OEP RNA-seq. They must never be
+      counted as independent (not in discovery twice, not as validation).
+    - **Unique: 63 iCCA tumours with RNA** (58 also with WES; 62 with OS, 36 deaths; 46 small duct, 7 large duct).
+    - Expression is FPKM for 12,724 pre-filtered genes only: 11,518 of the current 13,782 network-universe genes are
+      present (84%; 6,751 of 7,926 regulon genes). PC1 of the 63 tumours (15% of variance) tracks genes detected
+      (r 0.97; minimum 6,273): mild, a few low-complexity samples.
+  - **GSE179443 (Yonsei; PMID 35124821):** 137 liver cancers, **59 iCCA** (51 LC4, 8 LC3 "HCC-like"), 78 HCC. The file
+    named raw counts is log2(FPKM + 1) (Cufflinks, GENCODE v27; per GEO processing notes). After rescaling to TPM over
+    the network genes quality is uniform (11,626–13,062 genes detected, PC1 unrelated to detection); 13,781 of 13,782
+    universe genes present. No survival and no genomics in GEO; the authors' LC subtype labels are there.
+  - Claude Cloud's classifier branch (`origin/claude/upbeat-keller-9i651f`: ICC signature sets, published labels,
+    07b changes) is fetched and will be merged after the discovery design is settled.
+
 - **[2026-10-02] Split-half stability results (step 08b; half-networks built on ~157 tumours each).**
   | | half A held out | half B held out |
   |---|---|---|
