@@ -1,0 +1,90 @@
+# ICC reference panel: which published signatures and classes the publication figures (step 09) show.
+# Loaded by scripts/hcc_panel.py. Set names as in results/07_post/signatures/signatures.tsv; classes are our NTP
+# calls (07b), checked against the published per-patient calls (STIM 89% exact, Lin 2026 81%, Dong 2022 78%,
+# Andersen ARI 0.85; PROJECT_LOG 2026-10-02). Sia 2013 is not shown: its calls do not transfer to RNA-seq.
+
+# Biology blocks for programs (Fig 1c/1d): block whose anchors have the highest mean activity r (>= block_min_r).
+block_min_r: 0.3
+blocks:
+  Large-duct / aggressive:
+    colour: adverse
+    anchors: [custom:LIN2026_SI, ANDERSEN_CHOLANGIOCARCINOMA_CLASS2, custom:SONG2022_LARGE_DUCT,
+              custom:MARTINSERRANO2023_TUMOUR_CLASSICAL]
+  Small-duct / differentiated:
+    colour: protective
+    anchors: [custom:DONG2022_S4_DIFFERENTIATION, custom:MARTINSERRANO2023_HEPATIC_STEM_LIKE, custom:SONG2022_SMALL_DUCT,
+              ANDERSEN_CHOLANGIOCARCINOMA_CLASS1]
+  Immune / stromal:
+    colour: immune
+    anchors: [custom:MONTIRONI2023_INFLAMED, custom:JOB2020_NK_OR_T, custom:MARTINSERRANO2023_IMMUNE_CLASSICAL,
+              custom:JOB2020_FIBROBLAST]
+
+signatures:
+  # ---- large duct / aggressive / proliferation
+  - {set: custom:LIN2026_SI, label: SI subgroup, tag: Lin 2026, block: Large-duct / aggressive}
+  - {set: ANDERSEN_CHOLANGIOCARCINOMA_CLASS2, label: Poor-prognosis class 2, tag: Andersen 2012, block: Large-duct / aggressive}
+  - {set: custom:SONG2022_LARGE_DUCT, label: Large-duct tumour cells, tag: Song 2022, block: Large-duct / aggressive}
+  - {set: custom:MARTINSERRANO2023_TUMOUR_CLASSICAL, label: Tumour classical, tag: STIM 2023, block: Large-duct / aggressive}
+  - {set: custom:DONG2022_S1_INFLAMMATION, label: S1 inflammation, tag: Dong 2022, block: Large-duct / aggressive}
+  - {set: custom:DONG2022_S2_INTERSTITIAL, label: S2 interstitial, tag: Dong 2022, block: Large-duct / aggressive}
+  - {set: custom:FAN2024_C1_MESENCHYMAL, label: C1 mesenchymal, tag: Fan 2024, block: Large-duct / aggressive}
+  - {set: HALLMARK_E2F_TARGETS, label: E2F targets, tag: H, block: Large-duct / aggressive}
+  - {set: HALLMARK_HYPOXIA, label: Hypoxia, tag: H, block: Large-duct / aggressive}
+  # ---- small duct / differentiated
+  - {set: custom:SONG2022_SMALL_DUCT, label: Small-duct tumour cells, tag: Song 2022, block: Small-duct / differentiated}
+  - {set: custom:MARTINSERRANO2023_HEPATIC_STEM_LIKE, label: Hepatic stem-like, tag: STIM 2023, block: Small-duct / differentiated}
+  - {set: custom:DONG2022_S4_DIFFERENTIATION, label: S4 differentiation, tag: Dong 2022, block: Small-duct / differentiated}
+  - {set: custom:DONG2022_S3_METABOLISM, label: S3 metabolism, tag: Dong 2022, block: Small-duct / differentiated}
+  - {set: ANDERSEN_CHOLANGIOCARCINOMA_CLASS1, label: Good-prognosis class 1, tag: Andersen 2012, block: Small-duct / differentiated}
+  - {set: OISHI_CHOLANGIOMA_STEM_CELL_LIKE_UP, label: Stem-cell-like, tag: Oishi 2012, block: Small-duct / differentiated}
+  - {set: custom:LIN2026_SIII_2, label: SIII-2 subgroup, tag: Lin 2026, block: Small-duct / differentiated}
+  - {set: HALLMARK_BILE_ACID_METABOLISM, label: Bile acid metabolism, tag: H, block: Small-duct / differentiated}
+  # ---- immune / stroma
+  - {set: custom:MARTINSERRANO2023_IMMUNE_CLASSICAL, label: Immune classical, tag: STIM 2023, block: Immune / stromal}
+  - {set: custom:MARTINSERRANO2023_INFLAMMATORY_STROMA, label: Inflammatory stroma, tag: STIM 2023, block: Immune / stromal}
+  - {set: custom:MARTINSERRANO2023_DESERT_LIKE, label: Desert-like, tag: STIM 2023, block: Immune / stromal}
+  - {set: custom:MONTIRONI2023_INFLAMED, label: Inflamed (20 genes), tag: Montironi 2023, block: Immune / stromal}
+  - {set: custom:JOB2020_NK_OR_T, label: NK / T cells, tag: Job 2020, block: Immune / stromal}
+  - {set: custom:JOB2020_MYELOID, label: Myeloid, tag: Job 2020, block: Immune / stromal}
+  - {set: custom:JOB2020_FIBROBLAST, label: Fibroblasts, tag: Job 2020, block: Immune / stromal}
+  - {set: custom:JOB2020_HSCACTIVATED, label: Activated HSC, tag: Job 2020, block: Immune / stromal}
+  - {set: HALLMARK_INTERFERON_GAMMA_RESPONSE, label: IFN-γ response, tag: H, block: Immune / stromal}
+  - {set: HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION, label: EMT, tag: H, block: Immune / stromal}
+
+classifiers:
+  stim:
+    title: STIM classes (Martin-Serrano 2023)
+    levels: {TUMOUR_CLASSICAL: [Tumour classical, adverse], INFLAMMATORY_STROMA: [Inflammatory stroma, immune],
+             IMMUNE_CLASSICAL: [Immune classical, immune], DESERT_LIKE: [Desert-like, other],
+             HEPATIC_STEM_LIKE: [Hepatic stem-like, protective]}
+  dong2022:
+    title: Proteomic subgroups (Dong 2022)
+    levels: {S1: [S1 inflammation, adverse], S2: [S2 interstitial, adverse], S3: [S3 metabolism, protective],
+             S4: [S4 differentiation, protective]}
+  duct:
+    title: Duct type (Song 2022)
+    levels: {large_duct: [Large duct, adverse], small_duct: [Small duct, protective]}
+  andersen:
+    title: Andersen 2012
+    levels: {class2: [Class 2 (poor), adverse], class1: [Class 1 (good), protective]}
+  lin2026:
+    title: Lin 2026 subgroups
+    levels: {SI: [SI, adverse], SII: [SII, other], SIII-1: [SIII-1, protective], SIII-2: [SIII-2, protective],
+             SIII-3: [SIII-3, protective]}
+
+figures:
+  fig1c_tracks:
+    - [stim, [TUMOUR_CLASSICAL, INFLAMMATORY_STROMA, IMMUNE_CLASSICAL, DESERT_LIKE, HEPATIC_STEM_LIKE]]
+    - [dong2022, [S1, S2, S3, S4]]
+    - [duct, [large_duct, small_duct]]
+  fig2b_panels:
+    - [stim, [TUMOUR_CLASSICAL, INFLAMMATORY_STROMA, DESERT_LIKE, IMMUNE_CLASSICAL, HEPATIC_STEM_LIKE]]
+    - [dong2022, [S1, S2, S3, S4]]
+    - [andersen, [class2, class1]]
+  fig2c_rows:
+    - [stim, TUMOUR_CLASSICAL]
+    - [stim, HEPATIC_STEM_LIKE]
+    - [stim, IMMUNE_CLASSICAL]
+    - [dong2022, S1]
+    - [dong2022, S4]
+    - [duct, large_duct]

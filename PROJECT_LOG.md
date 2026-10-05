@@ -25,6 +25,17 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Decisions
 
+- **[2026-10-05] ICC publication figures (step 09 adapted) and legends.** `config/reference_panel.yaml` rewritten for ICC
+  (blocks: large-duct / aggressive, small-duct / differentiated, immune / stromal; signatures; classes = our NTP calls for
+  STIM, Dong 2022, Song duct, Andersen, Lin 2026; Sia 2013 left out). `config/program_labels.tsv` curated for the 40
+  programs with the largest weights + the 4 FGFR2-fusion target programs (IDs refer to the d374 network).
+  Figure 1: design, numbers, programs × states with class / driver tracks, program–signature r, FGFR2-fusion causal flow,
+  causal replication in OEP002768 (replaces the HCC driver panels). Figure 2: weights, risk by class, states by risk with
+  GuanRank (ρ 0.73, P 2.8e-4, 20 states), KM in five test settings, forest (pooled held-out HR/SD 1.62, 1.27–2.05),
+  head-to-head (07g), split-half (pending). Legends in `docs/figure_legends.md`.
+  - Correction to the d374 / d315 / d433 comparison table: the TCGA / GSE107943 C-indices were from the regulon ridge model;
+    program ridge values are now in the table (`08d_compare_designs.py` fixed). Conclusions unchanged.
+
 - **[2026-10-04] Causal flows replicate in an independent cohort (step 08e, OEP002768: 59 unique patients, WES driver
   table, never in the network).** One regulon per driver × family from the high-confidence flows, scored in OEP002768
   (mean z), altered vs wild type; null = random non-linked regulons with the same predicted signs (1,000 draws).
@@ -82,7 +93,7 @@ is never mixed into the HCC network. Newest entries first. Everything is written
   | GSE244807 surgical C / HR/SD | 0.62 / 1.50 | 0.63 / 1.70 | 0.64 / 1.70 |
   | GSE244807 biopsy HR/SD (p) | 1.14 (0.27) | 1.36 (0.012) | 1.29 (0.040) |
   | OEP002768 C / HR/SD | 0.70 / 2.18 (held out) | 0.69 / 2.06 (held out) | 0.65 / 1.90 (in network) |
-  | TCGA / GSE107943 C | 0.61 / 0.68 | 0.60 / 0.67 | 0.62 / 0.69 |
+  | TCGA / GSE107943 C (program ridge) | 0.58 / 0.68 | 0.56 / 0.69 | 0.57 / 0.70 |
   - **Reading:** adding GSE179443 improves external validation in GSE244807 (both strata) at almost no gene cost and keeps
     OEP002768 as an independent test. Adding OEP002768 on top costs 2,000 genes and 24% of the regulators, weakens the IDH1
     and BAP1 causal signal, and does not improve any external test. **Recommendation: d374, OEP002768 held out.**

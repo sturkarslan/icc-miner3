@@ -62,7 +62,7 @@ def main():
         rs = pd.read_csv(os.path.join(res, "06_risk", mx, "risk_summary.tsv"), sep="\t")
         pr = rs[(rs["part"] == "prognostic") & (rs["unit"] == "programs")]
         r["prognostic_programs"] = f"{int(pr['n_prognostic'].iloc[0])}/{int(pr['n_tested'].iloc[0])}"
-        rid = rs[rs["unit"].astype(str).str.contains("ridge_programs", na=False) | rs["part"].astype(str).str.contains("ridge", na=False)]
+        rid = rs[rs["unit"].astype(str).str.startswith("ridge_programs")]     # primary model: ridge on program activity
         for _, x in rid.iterrows():
             if isinstance(x.get("cohort"), str) and pd.notna(x.get("c_index")):
                 r[f"C_{x['cohort']}"] = x["c_index"]
