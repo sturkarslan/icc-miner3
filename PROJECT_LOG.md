@@ -25,6 +25,21 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Decisions
 
+- **[2026-10-04] Causal flows replicate in an independent cohort (step 08e, OEP002768: 59 unique patients, WES driver
+  table, never in the network).** One regulon per driver × family from the high-confidence flows, scored in OEP002768
+  (mean z), altered vs wild type; null = random non-linked regulons with the same predicted signs (1,000 draws).
+  | driver | altered / WT | flows | same direction | null | p | same dir. and p < 0.05 | regulator mRNA same dir. |
+  |---|---|---|---|---|---|---|---|
+  | TP53 | 10 / 44 | 124 | 97% | 52% | 0.001 | 29% | 86% |
+  | BAP1 | 8 / 46 | 142 | 96% | 49% | 0.001 | 30% | 67% |
+  | FGFR2 fusion | 7 / 52 | 94 | 97% | 52% | 0.001 | 21% | 89% |
+  | IDH pathway | 11 / 43 | 68 | 76% | 42% | 0.001 | 13% | 64% |
+  | IDH1 alone | 8 / 46 | 48 | 44% | 35% | 0.09 | 4% | 54% |
+  KRAS not testable (3 mutants). With 7–11 altered tumours single flows rarely reach p < 0.05, but the direction of the
+  causal effects replicates almost perfectly for TP53, BAP1 and FGFR2 fusion. This is stronger evidence than the
+  split-half edge recovery (which re-runs the whole inference on half the data). IDH1 flows do not replicate on their own.
+- **[2026-10-04] Split-half stability submitted on d374** (SLURM 15129–15139).
+
 - **[2026-10-02] Main configuration = design d374 (user decision).** `config/params.yaml` now has GSE179443 in discovery,
   `exclude_modules: []` + gene-based technical anchor; identical to the tested d374 config (checked key by key).
   Folders: `results/` = d374 (was `results_d374/`), `results_d315/` = previous main (with its split-half and FU-only
