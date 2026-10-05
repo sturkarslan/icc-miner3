@@ -66,7 +66,9 @@ cohorts the score validates in resected tumours (GSE244807, HR 1.70 per s.d.; OE
 biopsies of advanced disease (HR 1.36). It performs as well as the best published iCCA classifiers and signatures
 (STIM classes, Sia 2013 survival and recurrence signatures, Dong 2022 prognostic markers) but does not add to them;
 several small published signatures do not replicate. As in our HCC network, its value lies in explaining risk
-mechanistically rather than in predicting it more accurately.
+mechanistically rather than in predicting it more accurately. Rebuilding everything on half of the tumours recovers
+96% of the regulators and the program activities (r ≈ 0.8), and the risk model built that way still separates the
+unseen half (C-index 0.69 and 0.75).
 
 ### Legend
 
@@ -89,7 +91,12 @@ them); signatures are scored as mean z (up minus down genes) and, when unsigned,
 are stratified by specimen type. Adding the network score to STIM, Sia 2013 survival or Dong 2022 markers:
 likelihood-ratio P ≥ 0.09.
 **g**, Split-half stability: the network, causal inference and risk model were rebuilt on a random half of the 374
-tumours (stratified by cohort) and compared with the full network. *(Pending: split-half run on d374 in progress.)*
+tumours (stratified by cohort) and compared with the full network. Bars: regulators recovered; median correlation, in
+the held-out half, between each program's activity and its best match in the half-network (all programs; the quarter
+with the largest risk weights); full-network driver → regulator edges found among the half-network's flows. Text:
+C-index and HR per s.d. in the FU-iCCA patients of the held-out half when both the network and the risk model were
+built without them. Exact regulon membership is not reproducible (median best Jaccard 0.10), so results are read at the
+level of regulators and program activity.
 
 ---
 

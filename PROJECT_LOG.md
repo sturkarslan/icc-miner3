@@ -25,6 +25,13 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Decisions
 
+- **[2026-10-05] Split-half stability on d374 (SLURM 15129–15139), Figure 2g filled.** Halves A / B held out: regulators
+  recovered 96% / 96%; program activity r in the held-out half 0.80 / 0.80 (risk-weighted programs 0.82 / 0.83); regulon
+  membership median best Jaccard 0.10 / 0.11; full-network causal edges among half-network flows 46% / 39% (high-confidence
+  23% / 22%; by driver KRAS 43 / 40%, TP53 26 / 49%, IDH 34 / 40%, BAP1 46 / 52%, FGFR2 fusion 51 / 4% — about 14 fusions per
+  half); risk in the unseen FU-iCCA half C 0.69 / 0.75, HR/SD 2.05 / 2.35. Essentially the same as on d315. The FGFR2-fusion
+  edges are unstable at half size but replicate in direction in OEP002768 (97%, step 08e).
+
 - **[2026-10-05] ICC publication figures (step 09 adapted) and legends.** `config/reference_panel.yaml` rewritten for ICC
   (blocks: large-duct / aggressive, small-duct / differentiated, immune / stromal; signatures; classes = our NTP calls for
   STIM, Dong 2022, Song duct, Andersen, Lin 2026; Sia 2013 left out). `config/program_labels.tsv` curated for the 40
