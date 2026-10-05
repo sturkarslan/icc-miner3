@@ -43,6 +43,35 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Decisions
 
+- **[2026-10-05] Step 10 for ICC: DCNA, cell lines, trial emulation; Figure 2 e–g replaced (user request: same as HCC).**
+  Claude Cloud's branch merged (`docs/soc_response_validation_design.md`, `docs/trial_emulation_design.md`, `config/trials.yaml`).
+  - **DCNA (`scripts/10b_dcna.py`)** with the causal-flow extension of the design: drug targets (Open Targets) → regulons, plus,
+    for targets that are altered drivers (FGFR2 fusion, IDH1, ERBB2 amp, BRAF), their causal-flow regulons signed by direction
+    (FGFR inhibitors 12–13 target + 170 causal regulons; ivosidenib 1 + 77; zanidatamab 2 + 145 from MINER-filtered flows,
+    ERBB2 has no high-confidence flows). PDCD1 and TYMS are not in the network (anti-PD-1 → CD274 regulons as proxy; 5-FU and
+    platinum unscored).
+  - **Discovery subgroups:** FGFR-inhibitor DCNA higher in FGFR2-fusion tumours (AUC 0.79; target regulons alone 0.77, which
+    avoids the circularity of the causal part); ivosidenib in IDH1-mutant 0.87, zanidatamab in ERBB2-amplified 0.83 (both
+    largely circular, flows come from those tumours); CD274 DCNA in STIM inflamed 0.82.
+  - **GSE255058 (HAIC-FOLFOX + lenvatinib + anti-PD-1, 18 biopsies):** regimen DCNA (lenvatinib or CD274 regulons, independent
+    action) AUC 0.85, P 0.013; predicted responders 73% vs 14% observed response. Lenvatinib alone 0.61, CD274 alone 0.74. Small;
+    the CD274 proxy was chosen after the first run showed PD-1 maps to no regulon (not tuned on outcome, but post hoc).
+  - **Cell lines (`scripts/10c_dcna_celllines.py`):** GDSC has only 4 biliary lines, so PRISM Repurposing 19Q4 secondary screen
+    (figshare) was used: 6 biliary lines with Cell Model Passports RNA-seq, 711 drugs mapped. Pooled Δ z AUC −0.14 (label
+    permutation P 0.001) but random regulon sets give −0.18 (P 0.93): a line-level sensitivity axis, not drug targeting.
+    Negative, unlike HCC (16 lines, GDSC).
+  - **Trial emulation (`scripts/10d_trial_emulation.py`):** 9 arms (TOPAZ-1 ×2, KEYNOTE-966 ×2, FIGHT-202 A and cohort C
+    [FGFR-negative, ORR 0/17, from ClinicalTrials.gov], FOENIX-CCA2, ClarIDHy, HERIZON-BTC-01; ROAR not emulable, no BRAF pool).
+    Genomic eligibility applied to the pool; sex / age balancing from ClinicalTrials.gov (ancestry only when both levels are
+    represented — balancing KEYNOTE-966 on Asian share first collapsed the weights to effective n 2).
+    **Leave-one-trial-out global threshold: r 0.74 (random-drug null 95% 0.52, P 0.01), MAE 9.3 vs 13.0 points for the mean-ORR
+    baseline**; target-regulon-only DCNA r 0.78 (P 0.01), MAE 8.9. FGFR2-fusion arms 30% / 29% (obs 37 / 42%) vs FGFR-negative 6%
+    (obs 0%); ivosidenib 6% (obs 2.4%); zanidatamab 38% (obs 41%). Failures: GemCis arms 10% (obs 19 / 29%) and the immunotherapy
+    increment (ICI + GemCis 39% vs obs 27 / 29%; control-arm anchor predicts 48–55%, so the added ICI effect is overestimated).
+    Same-class transfer MAE 6.4 vs 5.6 naive. Unlike HCC, the ICC emulation beats the baseline, driven by biomarker selection.
+  - **Figures:** ICC Figure 2 e–g (forest, head-to-head, split-half) replaced by e = cell lines (PRISM, pooled) and f = trial
+    emulation; Figure 1a gets a fifth step "Drugs". Legends and narrative updated; removed panels listed as supplementary.
+
 - **[2026-10-05] Split-half stability on d374 (SLURM 15129–15139), Figure 2g filled.** Halves A / B held out: regulators
   recovered 96% / 96%; program activity r in the held-out half 0.80 / 0.80 (risk-weighted programs 0.82 / 0.83); regulon
   membership median best Jaccard 0.10 / 0.11; full-network causal edges among half-network flows 46% / 39% (high-confidence

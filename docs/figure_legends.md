@@ -33,6 +33,10 @@ following genes detected per sample) were excluded. Causal inference linked 78 g
 number and fusions; TCGA mutations) to regulators and regulons. A ridge risk model on program activity was trained on
 FU-iCCA overall survival (36 months) and applied with fixed weights to held-out cohorts: GSE244807 (n = 246; 109
 resected, 137 biopsies), OEP002768 (59 patients not shared with FU-iCCA) and GSE255058 (treatment response, n = 18).
+Drug response: each drug's targets (Open Targets) and, for targets that are altered drivers in the network (FGFR2 fusion,
+IDH1 mutation, ERBB2 amplification), the regulons of their causal flows were mapped to regulons; their mean activity
+(drug-constrained network activity, DCNA) was compared with drug sensitivity in biliary-tract cell lines (PRISM) and with
+response rates in published biliary-tract trials.
 **b**, Network size at each level (log scale).
 **c**, Mean regulon dysregulation (over- minus under-expressed membership) of each program (rows) in each state
 (columns); states clustered (average linkage, correlation distance), programs grouped into biology blocks. Tracks: mean
@@ -70,9 +74,19 @@ mechanistically rather than in predicting it more accurately. Rebuilding everyth
 96% of the regulators and the program activities (r ≈ 0.8), and the risk model built that way still separates the
 unseen half (C-index 0.69 and 0.75).
 
+The network also links drugs to tumours through their targets and causal flows. Applied to published biliary-tract
+trials, a single activity threshold fitted on the other trials reproduces the biomarker logic of the targeted trials:
+emulated FGFR-inhibitor arms drawn from FGFR2-fusion tumours are predicted to respond in about 30% of patients (observed
+37–42%), the same drug in FGFR-negative tumours in about 6% (observed 0%), ivosidenib in IDH1-mutant tumours in 6%
+(observed 2%) and zanidatamab in ERBB2-amplified tumours in 38% (observed 41%). Across all arms predicted and observed
+response rates correlate (r = 0.74; random drug assignments rarely do as well), and the error is smaller than predicting
+each arm from the other trials' average. The network overestimates the benefit of adding immunotherapy to
+gemcitabine–cisplatin. In biliary-tract cell lines, with only six lines, network activity tracks a general sensitivity
+axis rather than drug-specific targeting.
+
 ### Legend
 
-**Fig. 2 | Program-based risk, its biology and its validation.**
+**Fig. 2 | Program-based risk, its biology, its validation and drug response.**
 **a**, Largest adverse (red) and protective (blue) weights of the ridge model trained on FU-iCCA overall survival.
 **b**, Risk score (within-cohort z) by published class (nearest-template calls, all 374 tumours). Bars, median and
 interquartile range; Kruskal–Wallis P.
@@ -83,20 +97,24 @@ Spearman ρ = 0.73, P = 2.8 × 10⁻⁴ (20 states with ≥ 5 tumours).
 **d**, Kaplan–Meier curves for the within-cohort top 20% of risk scores versus the rest. TCGA-CHOL and GSE107943 were
 in the network but not in the risk model; GSE244807 (resected, biopsies) and OEP002768 were never used. C, Harrell's
 C-index; HR, Cox hazard ratio of top 20% vs rest.
-**e**, Cox hazard ratio per s.d. of risk score (95% CI) in every test cohort, with a random-effects (DerSimonian–Laird)
-pooled estimate over the held-out cohorts (GSE244807 resected and biopsy strata, OEP002768).
-**f**, C-index in the held-out cohorts of the network score and of published iCCA classifiers and signatures. Classes
-(STIM in GSE244807, the authors' calls; Lin 2026 in OEP002768) are Cox models fitted in the test cohort (optimistic for
-them); signatures are scored as mean z (up minus down genes) and, when unsigned, oriented in FU-iCCA. GSE244807 models
-are stratified by specimen type. Adding the network score to STIM, Sia 2013 survival or Dong 2022 markers:
-likelihood-ratio P ≥ 0.09.
-**g**, Split-half stability: the network, causal inference and risk model were rebuilt on a random half of the 374
-tumours (stratified by cohort) and compared with the full network. Bars: regulators recovered; median correlation, in
-the held-out half, between each program's activity and its best match in the half-network (all programs; the quarter
-with the largest risk weights); full-network driver → regulator edges found among the half-network's flows. Text:
-C-index and HR per s.d. in the FU-iCCA patients of the held-out half when both the network and the risk model were
-built without them. Exact regulon membership is not reproducible (median best Jaccard 0.10), so results are read at the
-level of regulators and program activity.
+**e**, DCNA and drug sensitivity in biliary-tract cell lines (PRISM Repurposing secondary screen; 711 drugs whose PRISM
+targets map to network regulons, 6 lines with RNA-seq: 4 intrahepatic, 1 extrahepatic, 1 gallbladder; 4,079 line–drug
+pairs). DCNA = mean trinary MINER activity of the regulons that a target regulates or belongs to, plus, for FGFR2 / IDH1
+/ ERBB2 targets, the signed regulons of their causal flows; lines are predicted responders when DCNA > 0. y axis, PRISM
+dose-response AUC standardized within drug (lower = more sensitive). Bars, median and interquartile range. Δ,
+difference in mean between classes; label permutation within drug (1,000) and random regulon sets of the same size
+(200); the effect is no larger than for random regulons.
+**f**, Emulation of published biliary-tract trials (9 arms from 6 trials; ORR and arm size from the publications in
+`config/trials.yaml`, baseline sex and age from ClinicalTrials.gov; FIGHT-202 cohort C from its posted results). For
+each arm, 1,000 synthetic cohorts of the arm's size were drawn from the discovery tumours that pass the arm's genomic
+eligibility (FGFR2 fusion, FGFR2-fusion negative, IDH1 mutant, ERBB2 amplified; pool size in the legend), weighted to the
+arm's sex and age. A patient responds if the drug's DCNA exceeds a threshold (combinations: either drug; pembrolizumab
+scored through CD274 regulons, PDCD1 being absent from the network; cisplatin, without a protein target, not scored).
+One threshold shared by all drugs was fitted on the other trials and applied to the held-out trial. Points, mean
+predicted ORR (vertical bars, 95% range over the synthetic cohorts) against observed ORR (horizontal bars, exact binomial
+95% CI). Text: Pearson r with the 95th percentile and P of a null in which each arm is scored with randomly chosen drugs;
+mean absolute error (MAE) compared with predicting each arm by the mean ORR of the other trials. ROAR (BRAF V600E) could
+not be emulated (no BRAF-mutant pool).
 
 ---
 
@@ -109,7 +127,11 @@ level of regulators and program activity.
 | 1d | `07_post/subtype_mapping/subtypes_filtered/program_signature_correlation.tsv` |
 | 1e | `05_causal/combat/highConfidenceCausalResults.csv` |
 | 1f | `08_validation/OEP002768/causal_replication.tsv` (step 08e) |
-| 2a, 2d (in network), 2e | `06_risk/combat/predictor_ridge_programs_FU_iCCA_OS_h36m/`, `06_risk/combat/risk_summary.tsv` |
-| 2d (held out), 2e | `08_validation/{GSE244807,OEP002768}/scores.tsv`, `08_validation/summary.tsv` |
-| 2f | `07_post/published/head_to_head.tsv` (step 07g) |
-| 2g | `08_validation/split/loco_summary.tsv` (step 08b) |
+| 2a, 2d (in network) | `06_risk/combat/predictor_ridge_programs_FU_iCCA_OS_h36m/`, `06_risk/combat/risk_summary.tsv` |
+| 2d (held out) | `08_validation/{GSE244807,OEP002768}/scores.tsv`, `08_validation/summary.tsv` |
+| 2e | `10_response/dcna/{celllines_tests.tsv,celllines_pairs.tsv}` (step 10c) |
+| 2f | `10_response/trials/{emulation_predictions.tsv,emulation_summary.tsv}` (step 10d) |
+
+Moved out of Figure 2 (2026-10-05; supplementary candidates): HR forest plot (`08_validation/summary.tsv`), C-index vs
+published classes and signatures (`07_post/published/head_to_head.tsv`, step 07g) and split-half stability
+(`08_validation/split/loco_summary.tsv`, step 08b).

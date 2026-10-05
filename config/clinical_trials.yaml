@@ -1,0 +1,11 @@
+# ClinicalTrials.gov fetch list for the ICC trial emulation (scripts/tools/fetch_trials.py): per-arm baseline sex, age,
+# Asian ancestry and any posted ORR. Arm definitions, published ORR and eligibility filters are in config/trials.yaml
+# (Claude Cloud, 2026-10-05); this file only drives the fetch.
+trials:
+  - {nct: NCT03875235, name: TOPAZ-1, arms: {}}
+  - {nct: NCT04003636, name: KEYNOTE-966, arms: {}}
+  - {nct: NCT02924376, name: FIGHT-202, arms: {}}
+  - {nct: NCT02052778, name: FOENIX-CCA2, arms: {}}
+  - {nct: NCT02989857, name: ClarIDHy, arms: {}}
+  - {nct: NCT04466891, name: HERIZON-BTC-01, arms: {}}
+  - {nct: NCT02034110, name: ROAR, arms: {}}

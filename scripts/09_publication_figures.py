@@ -166,14 +166,15 @@ def f1a_design(ax, D, P):
     for (t, c, lines), h in zip(coh, hh):
         y -= h
         box(0, y, 20.3, h - 1.0, t, lines, COH[c])
-    steps = [("Harmonize", [f"{int(D['genes']['kept'].sum()):,} genes", "log2 TPM", "ComBat by cohort"]),
-             ("MINER network", ["regulons", "(technical excluded)", "→ programs", "→ states"]),
-             ("Causal inference", [f"{D['genomic'].shape[0]} genomic", "features: driver", "→ regulator", "→ regulon"]),
-             ("Risk model", ["ridge on", f"{len(D['programs'])} programs;", "FU-iCCA OS,", "36 months"])]
+    steps = [("Harmonize", [f"{int(D['genes']['kept'].sum()):,} genes", "log2 TPM", "ComBat by", "cohort"]),
+             ("MINER", ["regulons", "(technical", "excluded)", "→ programs"]),
+             ("Causal", [f"{D['genomic'].shape[0]} genomic", "features", "→ regulator", "→ regulon"]),
+             ("Risk", ["ridge on", f"{len(D['programs'])} programs;", "FU-iCCA OS,", "36 months"]),
+             ("Drugs", ["targets and", "causal flows", "→ regulons;", "lines; trials"])]
     for i, (t, lines) in enumerate(steps):
-        x = 22.6 + i * 15.1
-        box(x, 15.0, 14.1, 14.5, t, lines, Q.INK)
-        arrow(x - 1.0 if i else 20.7, 22, x - 0.15, 22)
+        x = 22.6 + i * 12.1
+        box(x, 15.0, 11.3, 14.5, t, lines, Q.INK)
+        arrow(x - 0.8 if i else 20.7, 22, x - 0.15, 22)
     ax.text(22.6, 12.6, "Annotation: STIM, Dong 2022, Lin 2026, Andersen, Song duct-type classes; published signatures",
             fontsize=4.7, color=Q.INK2, va="top")
     ax.text(84.5, 40.2, "Held-out validation", fontsize=5.8, fontweight="bold", va="top")
@@ -773,6 +774,66 @@ def f2h_loco(ax, D):
     return S
 
 
+def f2e_celllines(ax, D):
+    """DCNA vs PRISM drug sensitivity in biliary-tract cell lines (step 10c), all mapped drugs pooled."""
+    ddir = os.path.join(D["res"], "10_response", "dcna")
+    T = pd.read_csv(os.path.join(ddir, "celllines_tests.tsv"), sep="\t").iloc[0]
+    X = pd.read_csv(os.path.join(ddir, "celllines_pairs.tsv"), sep="\t")
+    rng = np.random.default_rng(0)
+    dd = [X.loc[X["pred"] == 0, "z_auc"], X.loc[X["pred"] == 1, "z_auc"]]
+    for i, (v, col) in enumerate(zip(dd, (PROT, ADV))):
+        ax.scatter(i + rng.uniform(-0.22, 0.22, len(v)), v, s=0.5, color=col, alpha=0.2, lw=0)
+        q1, md, q3 = np.percentile(v, [25, 50, 75])
+        ax.plot([i, i], [q1, q3], color=Q.INK, lw=1.2)
+        ax.plot([i - 0.28, i + 0.28], [md, md], color=Q.INK, lw=1.0)
+    pp = T["perm_p_one_sided"]
+    ax.text(0.5, 1.0, f"Δ = {T['delta']:.2f}; label permutation P {'< 0.001' if pp <= 0.001 else f'= {pp:.3f}'}\n"
+            f"random regulons Δ = {T['random_regulon_null_mean']:.2f}, P = {T['random_regulon_p_one_sided']:.2f}",
+            transform=ax.transAxes, ha="center", va="bottom", fontsize=4.5)
+    ax.set_xticks([0, 1])
+    ax.set_xticklabels(["predicted\nnon-responder", "predicted\nresponder"], fontsize=4.8)
+    ax.set_ylabel("PRISM AUC (z within drug)")
+    despine(ax)
+    ax.set_title(f"Biliary cell lines: {int(T['drugs'])} drugs × {int(T['lines'])} lines", pad=16)
+    return T
+
+
+def f2f_trials(ax, D):
+    """Trial emulation (step 10d): leave-one-trial-out global DCNA threshold, predicted vs observed ORR."""
+    tdir = os.path.join(D["res"], "10_response", "trials")
+    PR = pd.read_csv(os.path.join(tdir, "emulation_predictions.tsv"), sep="\t")
+    S = pd.read_csv(os.path.join(tdir, "emulation_summary.tsv"), sep="\t")
+    g = PR[PR["mode"].str.startswith("B")]
+    s = S[S["mode"].str.startswith("B")].iloc[0]
+    col = {"ICI + GemCis": ADV, "GemCis": Q.MUTED, "FGFR inhibitor, fusion+": Q.SLOTS[2], "FGFR inhibitor, FGFR-negative": Q.SLOTS[2],
+           "IDH1 inhibitor": Q.SLOTS[3], "HER2": Q.SLOTS[4]}
+    lab = {"FIGHT-202 cohort A": "FIGHT-202 (FGFR2 fusion)", "FIGHT-202 cohort C": "FIGHT-202 (FGFR-negative)", "FOENIX-CCA2": "FOENIX-CCA2",
+           "ClarIDHy": "ClarIDHy", "HERIZON-BTC-01 cohort 1": "HERIZON-BTC-01", "TOPAZ-1": "TOPAZ-1", "KEYNOTE-966": "KEYNOTE-966"}
+    names = {"ICI + GemCis": "ICI + GemCis: TOPAZ-1, KEYNOTE-966", "GemCis": "GemCis: TOPAZ-1, KEYNOTE-966 controls",
+             "FGFR inhibitor, fusion+": "FGFR inhibitor, FGFR2 fusion: FIGHT-202, FOENIX-CCA2",
+             "FGFR inhibitor, FGFR-negative": "FGFR inhibitor, FGFR-negative: FIGHT-202 cohort C",
+             "IDH1 inhibitor": "ivosidenib, IDH1 mutant: ClarIDHy", "HER2": "zanidatamab, HER2: HERIZON-BTC-01"}
+    for cl, h in g.groupby("class", sort=False):
+        c = col.get(cl, Q.INK)
+        mk = "D" if "negative" in cl else "o"
+        ax.errorbar(100 * h["orr"], 100 * h["pred"], yerr=[100 * (h["pred"] - h["lo"]), 100 * (h["hi"] - h["pred"])],
+                    xerr=[100 * (h["orr"] - h["orr_lo"]), 100 * (h["orr_hi"] - h["orr"])], fmt=mk, ms=3, lw=0.4, color=c, capsize=0,
+                    label=f"{names.get(cl, cl)} (pool {', '.join(str(int(x)) for x in h['pool'].unique())})")
+    ax.legend(loc="upper left", fontsize=4.0, handletextpad=0.2, borderaxespad=0.1)
+    m = 55
+    ax.plot([0, m], [0, m], color=Q.AXIS, lw=0.5, ls="--")
+    ax.set_xlim(-2, m)
+    ax.set_ylim(-2, 70)
+    ax.set_xlabel("observed ORR (%)")
+    ax.set_ylabel("predicted ORR (%)")
+    ax.text(0.98, 0.04, f"{len(g)} arms, {g['trial'].str.split(' ').str[0].nunique()} trials\nr = {s['pearson']:.2f} "
+            f"(random drugs: 95% {s['null_pearson_95']:.2f}, P = {s['null_p']:.2f})\nMAE {100 * s['mae']:.1f} pts "
+            f"(mean-ORR baseline {100 * s['naive_mae']:.1f})", transform=ax.transAxes, ha="right", va="bottom", fontsize=4.4)
+    despine(ax)
+    ax.set_title("Clinical-trial emulation (leave-one-trial-out)")
+    return g
+
+
 def figure2(D, P, outdir, log, m07c):
     fig = plt.figure(figsize=(W, 240 * MM))
     gs = gridspec.GridSpec(4, 1, height_ratios=[50, 62, 42, 62], hspace=0.5, left=0.035, right=0.985, top=0.975,
@@ -790,26 +851,20 @@ def figure2(D, P, outdir, log, m07c):
     r3 = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs[2], width_ratios=[0.045, 1], wspace=0.0)
     axd, axe = f2d_e_km(fig, r3[1], D, P)
     letter(axd, "d", x=-0.3)
-    r4 = gridspec.GridSpecFromSubplotSpec(1, 3, subplot_spec=gs[3], width_ratios=[1.45, 1.12, 0.78], wspace=0.3)
-    axf, fo = f2f_forest(fig, r4[0], D)
-    letter(axf, "e", x=-0.6)
-    r4g = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=r4[1], width_ratios=[0.5, 1], wspace=0.0)
-    ax = fig.add_subplot(r4g[1])
-    H = f2g_benchmark(ax, D)
-    letter(ax, "f", x=-0.55)
-    r4h = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=r4[2], height_ratios=[1, 0.9], hspace=0.0)
-    ax = fig.add_subplot(r4h[0])
-    loco = f2h_loco(ax, D)
-    letter(ax, "g", x=-0.08, y=1.02)
+    r4 = gridspec.GridSpecFromSubplotSpec(1, 4, subplot_spec=gs[3], width_ratios=[0.12, 0.8, 0.25, 1.35], wspace=0.3)
+    ax = fig.add_subplot(r4[1])
+    ct = f2e_celllines(ax, D)
+    letter(ax, "e", x=-0.35, y=1.12)
+    ax = fig.add_subplot(r4[3])
+    tr = f2f_trials(ax, D)
+    letter(ax, "f", x=-0.2, y=1.04)
     for ext in ("pdf", "png"):
         fig.savefig(os.path.join(outdir, f"figure2.{ext}"))
     plt.close(fig)
     with pd.ExcelWriter(os.path.join(outdir, "figure2_source_data.xlsx")) as xw:
         w.to_frame("weight").to_excel(xw, sheet_name="2a_weights")
-        fo.to_excel(xw, sheet_name="2e_forest", index=False)
-        H.to_excel(xw, sheet_name="2f_head_to_head", index=False)
-        if loco is not None:
-            loco.to_excel(xw, sheet_name="2g_split_half")
+        ct.to_frame("value").to_excel(xw, sheet_name="2e_celllines")
+        tr.to_excel(xw, sheet_name="2f_trial_emulation", index=False)
     log.info("Figure 2 written")
 
 
