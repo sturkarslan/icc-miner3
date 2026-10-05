@@ -144,7 +144,7 @@ def plab(D, k, short=False):
 # ================================================================ Figure 1
 def f1a_design(ax, D, P):
     ax.set_xlim(0, 100)
-    ax.set_ylim(1.5, 40.5)
+    ax.set_ylim(0.8, 40.5)
     ax.axis("off")
     S = D["samples"]["cohort"].value_counts()
 
@@ -177,6 +177,8 @@ def f1a_design(ax, D, P):
         arrow(x - 0.8 if i else 20.7, 22, x - 0.15, 22)
     ax.text(22.6, 12.6, "Annotation: STIM, Dong 2022, Lin 2026, Andersen, Song duct-type classes; published signatures",
             fontsize=4.7, color=Q.INK2, va="top")
+    box(22.6, 2.2, 59.5, 7.8, "Drug-response tests", ["PRISM: 6 biliary lines × 711 drugs  ·  GSE255058: HAIC + lenvatinib + anti-PD-1",
+        "9 arms of 6 biliary-tract trials (FGFR2, IDH1, HER2, ICI + GemCis); 1,000 synthetic cohorts each"], Q.SLOTS[2])
     ax.text(84.5, 40.2, "Held-out validation", fontsize=5.8, fontweight="bold", va="top")
     ext = [("GSE244807", ["n = 246 · RNA-seq · OS", "109 resected,", "137 biopsies"], EXT_COL["GSE244807"]),
            ("OEP002768", ["n = 59 unique", "RNA-seq · WES · OS"], EXT_COL["OEP002768"]),
