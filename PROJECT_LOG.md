@@ -7,6 +7,24 @@ is never mixed into the HCC network. Newest entries first. Everything is written
 
 ## Open questions
 
+- **[2026-10-05] SOC response validation and in-silico trial emulation: designs written, not run.**
+  `docs/soc_response_validation_design.md` (ICC SOC, response rates, drug → network map),
+  `docs/trial_emulation_design.md` (shared with HCC), arms in `config/trials.yaml` (9 arms: TOPAZ-1, KEYNOTE-966,
+  FIGHT-202, FOENIX-CCA2, ClarIDHy, HERIZON-BTC-01, ROAR).
+  - **Key point (needs the user's decision):** a DCNA threshold set from a trial's own ORR makes predicted = observed by
+    construction. Recommended instead:
+    - threshold from the other trials of the same drug class (leave-one-trial-out), or from the control arm;
+    - per-trial fitting only as description.
+  - **Strongest ICC test:** the FGFR2-fusion contrast. FGFR inhibitors give 37–42% ORR in fusion-positive tumours only,
+    and the fusion → programs 49 / 51 / 52 / 54 flow replicates in OEP002768. Ivosidenib (ORR ~2%, cytostatic) is the
+    expected-low control.
+  - Small eligible pools (FGFR2 fusion 28 + 7, ERBB2 amp ~12, BRAF < 10) limit biomarker-trial emulation.
+  - **Next:**
+    - `fetch_drug_targets.py` (ChEMBL) and `fetch_trials.py` (ClinicalTrials.gov v2; blocked from Cloud, run on the
+      server);
+    - fill the trial Table 1 fractions;
+    - then step 10 (10a DCNA, 10b emulation, 10c figures).
+
 - **ICC classifiers are extracted** (see 2026-10-02 extraction entry). Still open: (1) the original Martin-Serrano Gut
   online Table S5 to confirm the STIM gene-to-class blocks (taken from Lin 2026; put the file in
   `data/papers/martin_serrano2023/manual/`); (2) run 07a / 07b on the server with the new classifiers and published

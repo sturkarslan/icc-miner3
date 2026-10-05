@@ -1,0 +1,149 @@
+# Published trial arms for in-silico trial emulation (docs/trial_emulation_design.md), ICC / BTC.
+# One entry per arm. Every value has a source; `verified` lists the fields checked against the paper or a review of it
+# (2026-10-05); NCT IDs are verified only where `nct` is listed. Unverified fields must be checked (or fetched by scripts/tools/fetch_trials.py) before use.
+# orr_criteria: RECIST1.1 | mRECIST; reviewer: independent | investigator. Never pool across criteria.
+# population: fractions of the arm (fill from Table 1); null = not yet extracted.
+# eligibility.filters: what the emulation can apply to our tumours; eligibility.unmatched: criteria we cannot apply.
+
+defaults:
+  n_cohorts: 1000
+  seed: 12
+
+arms:
+  TOPAZ1_durva_gemcis:
+    nct: NCT03875235
+    trial: TOPAZ-1
+    setting: 1L advanced BTC
+    drugs: [durvalumab, gemcitabine, cisplatin]
+    n: 341
+    orr: 0.267
+    orr_criteria: RECIST1.1
+    reviewer: investigator
+    control_arm: TOPAZ1_placebo_gemcis
+    eligibility:
+      filters: {site: [intrahepatic, extrahepatic, gallbladder]}
+      unmatched: [ECOG 0-1, unresectable or metastatic, no prior systemic therapy for advanced disease]
+    population: {intrahepatic: null, asia: null, male: null}
+    source: "Oh et al., NEJM Evid 2022 (EVIDoa2200015)"
+    verified: [orr, nct]
+  TOPAZ1_placebo_gemcis:
+    nct: NCT03875235
+    trial: TOPAZ-1
+    setting: 1L advanced BTC
+    drugs: [gemcitabine, cisplatin]
+    n: 344
+    orr: 0.187
+    orr_criteria: RECIST1.1
+    reviewer: investigator
+    eligibility: {filters: {site: [intrahepatic, extrahepatic, gallbladder]}, unmatched: [ECOG 0-1]}
+    population: {intrahepatic: null, asia: null, male: null}
+    source: "Oh et al., NEJM Evid 2022"
+    verified: [orr, nct]
+  KN966_pembro_gemcis:
+    nct: NCT04003636
+    trial: KEYNOTE-966
+    setting: 1L advanced BTC
+    drugs: [pembrolizumab, gemcitabine, cisplatin]
+    n: 533
+    orr: 0.287
+    orr_ci: [0.249, 0.328]
+    orr_criteria: RECIST1.1
+    reviewer: independent
+    control_arm: KN966_placebo_gemcis
+    eligibility: {filters: {site: [intrahepatic, extrahepatic, gallbladder]}, unmatched: [ECOG 0-1]}
+    population: {intrahepatic: null, asia: null, male: null}
+    source: "Kelley et al., Lancet 2023"
+    verified: [orr, orr_ci, nct]
+  KN966_placebo_gemcis:
+    nct: NCT04003636
+    trial: KEYNOTE-966
+    setting: 1L advanced BTC
+    drugs: [gemcitabine, cisplatin]
+    n: 536
+    orr: 0.285
+    orr_ci: [0.248, 0.326]
+    orr_criteria: RECIST1.1
+    reviewer: independent
+    eligibility: {filters: {site: [intrahepatic, extrahepatic, gallbladder]}, unmatched: [ECOG 0-1]}
+    population: {intrahepatic: null, asia: null, male: null}
+    source: "Kelley et al., Lancet 2023"
+    verified: [orr, orr_ci, nct]
+  FIGHT202_pemigatinib:
+    nct: NCT02924376
+    trial: FIGHT-202 cohort A
+    setting: ">= 2L, FGFR2 fusion / rearrangement"
+    drugs: [pemigatinib]
+    n: 108
+    orr: 0.370
+    orr_ci: [0.279, 0.469]
+    orr_criteria: RECIST1.1
+    reviewer: independent
+    eligibility:
+      filters: {FUS_FGFR2: 1}
+      unmatched: [progression after >= 1 prior therapy]
+    population: {intrahepatic: null, asia: null, male: null}
+    source: "Vogel et al., ESMO Open 2024 (final; PMC11190465)"
+    verified: [orr, orr_ci, n]
+  FOENIX_futibatinib:
+    nct: NCT02052778
+    trial: FOENIX-CCA2
+    setting: ">= 2L, FGFR2 fusion / rearrangement, iCCA"
+    drugs: [futibatinib]
+    n: 103
+    orr: 0.42
+    orr_criteria: RECIST1.1
+    reviewer: independent
+    eligibility: {filters: {FUS_FGFR2: 1, site: [intrahepatic]}, unmatched: [prior therapy]}
+    population: {intrahepatic: 1.0, asia: null, male: null}
+    source: "Goyal et al., NEJM 2023 (reviewed in HBSN)"
+    verified: [orr, n]
+  CLARIDHY_ivosidenib:
+    nct: NCT02989857
+    trial: ClarIDHy
+    setting: ">= 2L, IDH1 mutant"
+    drugs: [ivosidenib]
+    n: 124
+    orr: 0.024
+    orr_criteria: RECIST1.1
+    reviewer: independent
+    eligibility: {filters: {MUT_IDH1: 1}, unmatched: [1-2 prior lines]}
+    population: {intrahepatic: null, asia: null, male: null}
+    source: "Abou-Alfa et al., Lancet Oncol 2020"
+    verified: []
+    note: "cytostatic; benefit is PFS (median 2.7 vs 1.4 months), not response: expected-low-ORR control"
+  HERIZON_zanidatamab:
+    nct: NCT04466891
+    trial: HERIZON-BTC-01 cohort 1
+    setting: ">= 2L, HER2 amplified (IHC 2+/3+)"
+    drugs: [zanidatamab]
+    n: 80
+    orr: 0.413
+    orr_criteria: RECIST1.1
+    reviewer: independent
+    eligibility: {filters: {AMP_ERBB2: 1}, unmatched: [IHC 2+/3+ (we have amplification only)]}
+    population: {intrahepatic: null, asia: null, male: null}
+    source: "Harding et al., Lancet Oncol 2023 (ESMO summary)"
+    verified: [orr]
+  ROAR_dabrafenib_trametinib:
+    nct: NCT02034110
+    trial: ROAR (BTC cohort)
+    setting: ">= 2L, BRAF V600E"
+    drugs: [dabrafenib, trametinib]
+    n: 43
+    orr: 0.51
+    orr_ci: [0.36, 0.67]
+    orr_criteria: RECIST1.1
+    reviewer: investigator
+    eligibility: {filters: {MUT_BRAF: 1}, unmatched: [V600E specifically (MUT_BRAF is any protein-altering BRAF call), prior therapy]}
+    population: {intrahepatic: null, asia: null, male: null}
+    source: "Subbiah et al., Lancet Oncol 2020; Nat Med 2023"
+    verified: [orr, orr_ci]
+    note: "pool probably < 10 tumours: report as not emulable unless the pool is large enough"
+
+real_world:                    # pooled / observational ORR for the same regimens (not trial arms; for context)
+  durva_gemcis:
+    - {cohort: UK early access, orr: 0.291, dcr: 0.612, source: PMC12427249}
+    - {cohort: worldwide multicentre, orr: 0.327, source: "Eur J Cancer 2024 (S0959804924008554)"}
+    - {cohort: India multicentre, orr: 0.297, source: "JCO Glob Oncol (GO.24.00216)"}
+    - {cohort: Japan single centre, orr: 0.23, dcr: 0.82, source: PMC11764297}
+    - {cohort: iCCA only, orr: 0.273, dcr: 0.652, source: "PubMed 41876834"}
